@@ -1,11 +1,13 @@
 import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 from fastapi.param_functions import Form
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
 from fastapi import status, HTTPException
 from fastapi.security.utils import get_authorization_scheme_param
 from starlette.requests import Request
+from fastapi.security.base import SecurityBase
 
 class GetUser(BaseModel):
     email: EmailStr
@@ -19,13 +21,24 @@ class UserCreate(GetUser):
 
 
 class UserAuth(OAuth2PasswordRequestForm):
+    #email: EmailStr = Field(..., description="user email"),
+    #password: str  = Field(..., min_length=5, max_length=24, description="user password")
+
     def __init__(
         self,
+        grant_type: str = Form(default=None, regex="password"),
         email: EmailStr = Form(),
-        password: str  = Form()
+        password: str = Form(),
+        scope: str = Form(default=""),
+        client_id: Optional[str] = Form(default=None),
+        client_secret: Optional[str] = Form(default=None),
     ):
+        self.grant_type = grant_type
         self.email = email
         self.password = password
+        self.scopes = scope.split()
+        self.client_id = client_id
+        self.client_secret = client_secret
 
 
 class OAuth2PasswordToken(OAuth2PasswordBearer):
@@ -44,7 +57,7 @@ class OAuth2PasswordToken(OAuth2PasswordBearer):
         return param
 
 
-class UserInDB(BaseModel):
+class UserToken(BaseModel):
     auth_token: str
 
 
@@ -54,8 +67,7 @@ class Userfull(BaseModel):
     username: str
     first_name: str
     last_name: str
-    timestamp: datetime.date
-    is_subscribed: Optional[int | bool] = False
+    is_subscribed: Optional[str | bool] = False
 
 
 class ListUserfull(BaseModel):
@@ -80,5 +92,5 @@ class UserUpdate(BaseModel):
 
 
 class TokenPayload(BaseModel):
-    sub: EmailStr = None
+    sub: int = None
     exp: int = None

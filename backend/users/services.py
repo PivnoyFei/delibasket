@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from db import database
 from users import utils
 from users.models import Follow
-from users.schemas import GetUser, UserInDB, UserCreate, UserAuth, Userfull
+from users.schemas import GetUser, UserToken, UserCreate, UserAuth, Userfull
 
 user_router = APIRouter(prefix='/api', tags=["users"])
 db_follow = Follow(database)

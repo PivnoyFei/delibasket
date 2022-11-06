@@ -1,17 +1,16 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from db import database, engine, metadata
-from settings import STATIC_ROOT # , TEMPLATES_DIR
+from settings import STATIC_ROOT
 from users.api import user_router
+from recipes.api import recipe_router
 
 app = FastAPI()
 app.state.database = database
 metadata.create_all(engine)
 
-#templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
 app.mount("/static", StaticFiles(directory=STATIC_ROOT), name="static")
 
 
@@ -29,12 +28,5 @@ async def shutdown() -> None:
         await database_.disconnect()
 
 
-#@app.exception_handler(StarletteHTTPException)
-#async def custom_exception_handler(request, exc):
-#    return templates.TemplateResponse("error.html", {
-#        "request": request,
-#        "status": exc.status_code,
-#        "detail": exc.detail})
-
-
 app.include_router(user_router)
+app.include_router(recipe_router)
