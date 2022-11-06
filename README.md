@@ -4,24 +4,24 @@
 
 
 ## Прогрес
-```/api/users/``` get: Список пользователей ✔️
-```/api/users/{id}/``` get: Профиль пользователя ✔️
-```/api/users/me/``` get: Текущий пользователь ✔️
-```/api/users/subscriptions/``` get: Мои подписки ✔️
-```/api/users/{id}/subscribe/``` post: Подписаться на пользователя ✔️
-```/api/auth/token/login/``` post: Получить токен авторизации ✔️
-```/api/auth/token/logout/``` post: Удаление токена
-```/api/users/set_password/``` post: Изменение пароля
+- ```/api/users/``` get: Список пользователей ✔️
+- ```/api/users/{id}/``` get: Профиль пользователя ✔️
+- ```/api/users/me/``` get: Текущий пользователь ✔️
+- ```/api/users/subscriptions/``` get: Мои подписки ✔️
+- ```/api/users/{id}/subscribe/``` post: Подписаться на пользователя ✔️
+- ```/api/auth/token/login/``` post: Получить токен авторизации ✔️
+- ```/api/auth/token/logout/``` post: Удаление токена
+- ```/api/users/set_password/``` post: Изменение пароля
 
-```/api/tags/``` get: Cписок тегов
-```/api/tags/{id}/``` get: Получение тега
-```/api/recipes/``` get: Список рецептов
-```/api/recipes/download_shopping_cart/``` get: Скачать список покупок
-```/api/recipes/{id}/``` get: Получение рецепта
-```/api/recipes/{id}/favorite/``` post: Добавить рецепт в избранное
-```/api/recipes/{id}/shopping_cart/``` post:  Добавить рецепт в список покупок
-```/api/ingredients/``` get: Список ингредиентов
-```/api/ingredients/{id}/``` get: Получение ингредиента
+- ```/api/tags/``` get: Cписок тегов
+- ```/api/tags/{id}/``` get: Получение тега
+- ```/api/recipes/``` get: Список рецептов
+- ```/api/recipes/download_shopping_cart/``` get: Скачать список покупок
+- ```/api/recipes/{id}/``` get: Получение рецепта
+- ```/api/recipes/{id}/favorite/``` post: Добавить рецепт в избранное
+- ```/api/recipes/{id}/shopping_cart/``` post:  Добавить рецепт в список покупок
+- ```/api/ingredients/``` get: Список ингредиентов
+- ```/api/ingredients/{id}/``` get: Получение ингредиента
 
 
 ## Описание
