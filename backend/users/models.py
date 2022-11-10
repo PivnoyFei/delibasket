@@ -1,9 +1,9 @@
 from databases import Database
-from sqlalchemy import Column, ForeignKey, DateTime, Integer, String, Table, UniqueConstraint, Boolean, select, case, literal_column, text, join
+from db import metadata, Base
+from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, String,
+                        Table, UniqueConstraint, case, select)
 from sqlalchemy.sql import func
-
-from db import metadata
-from users.schemas import UserCreate, Userfull, UserAuth, ListUserfull
+from users.schemas import UserCreate
 
 users = Table(
     "users", metadata,
@@ -28,10 +28,7 @@ follow = Table(
 )
 
 
-class User:
-    def __init__(self, database: Database):
-        self.database = database
-
+class User(Base):
     async def get_users_all(self, pk: int):
         query = (
             select(
@@ -48,7 +45,6 @@ class User:
             .order_by(users.c.id)
         )
         query = await self.database.fetch_all(query)
-        print("=== query 2 ===", query)
         return query
 
     async def get_user_by_email(self, email: str) -> int | None:
@@ -59,13 +55,13 @@ class User:
         query = select(users.c.id).where(users.c.username == username)
         return await self.database.fetch_one(query)
 
-    async def get_user_password_id_by_email(self, email: str) -> UserAuth | None:
+    async def get_user_password_id_by_email(self, email: str):
         query = select(users.c.id, users.c.password).where(
-            users.c.email == email, users.c.is_active == True)
+            users.c.email == email)
         return await self.database.fetch_one(query)
 
     async def get_user_full_by_id(self, pk: int):
-        query = select([users]).where(users.c.id == pk, users.c.is_active == True)
+        query = select([users]).where(users.c.id == pk)
         return dict(await self.database.fetch_one(query))
 
         #"id": 1,
@@ -75,7 +71,7 @@ class User:
         #"last_name": "kekki",
         #"is_subscribed": false
 
-    async def create_user(self, user: UserCreate):
+    async def create_user(self, user: UserCreate) -> int:
         query = users.insert().values(
             email=user.email,
             password=user.password,
@@ -96,10 +92,7 @@ class User:
         await self.database.execute(query)
 
 
-class Follow:
-    def __init__(self, database: Database):
-        self.database = database
-
+class Follow(Base):
     async def is_subscribed(self, user_id: int, author_id: int) -> int | None:
         query = select([follow]).where(
             follow.c.user_id == user_id, follow.c.author_id == author_id
@@ -120,7 +113,6 @@ class Follow:
             .join_from(follow, users, users.c.id == follow.c.author_id)
             .where(follow.c.user_id == user_id, users.c.is_active == True)
         )
-        print("=== query ===", query)
         return await self.database.fetch_all(query)
 
     async def create(self, user_id: int, author_id: int):

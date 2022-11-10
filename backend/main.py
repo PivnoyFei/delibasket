@@ -1,7 +1,6 @@
+from db import database, engine, metadata
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-
-from db import database, engine, metadata
 from settings import STATIC_ROOT
 from users.api import user_router
 from recipes.api import recipe_router

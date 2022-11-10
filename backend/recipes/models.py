@@ -1,9 +1,9 @@
 from databases import Database
-from sqlalchemy import Column, ForeignKey, DateTime, Integer, String, Table, UniqueConstraint, Text, CheckConstraint, select
+from db import metadata, Base
+from recipes import schemas
+from sqlalchemy import (CheckConstraint, Column, DateTime, ForeignKey, Integer,
+                        String, Table, Text, UniqueConstraint, select)
 from sqlalchemy.sql import func
-
-from db import metadata
-from recipes.schemas import UserCreate, UserInDB, UserAuth
 
 ingredient = Table(
     "ingredient", metadata,
@@ -41,14 +41,14 @@ favorites = Table(
     Column("id", Integer, primary_key=True),
     Column("user_id", Integer, ForeignKey("users.id")),
     Column("recipe_id", Integer, ForeignKey("recipe.id")),
-    UniqueConstraint('user', 'recipe', name='unique_for_favorite')
+    UniqueConstraint('user_id', 'recipe_id', name='unique_for_favorite')
 )
 cart = Table(
     "cart", metadata,
     Column("id", Integer, primary_key=True),
     Column("user_id", Integer, ForeignKey("users.id")),
     Column("recipe_id", Integer, ForeignKey("recipe.id")),
-    UniqueConstraint('user', 'recipe', name='unique_for_cart')
+    UniqueConstraint('user_id', 'recipe_id', name='unique_for_cart')
 )
 amount_ingredient = Table(
     "amount_ingredient", metadata,
@@ -57,6 +57,30 @@ amount_ingredient = Table(
     Column("recipe_id", Integer, ForeignKey("recipe.id")),
     Column("amount", Integer),
     CheckConstraint('amount > 0', name='amount_check'),
-    UniqueConstraint('user', 'recipe', name='unique_for_cart')
+    UniqueConstraint('ingredient_id', 'recipe_id', name='unique_for_amount_ingredient')
 )
 
+
+class Tag(Base):
+    async def create_tag(self, tag):
+        query = tag.insert().values(
+            name=tag.name,
+            color=tag.color,
+            slug=tag.slug,
+        )
+        return await self.database.execute(query)
+
+
+class Recipe(Base):
+    async def create_recipe(self, user) -> int:
+        query = recipe.insert().values(
+            email=user.email,
+            password=user.password,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            is_active=True,
+            is_staff=False,
+            is_superuser=False
+        )
+        return await self.database.execute(query)

@@ -16,7 +16,7 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", default="postgres")
 POSTGRES_SERVER = os.getenv("POSTGRES_SERVER", default="localhost")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", default="5432")
 
-USE_SQLITE = os.getenv("USE_SQLITE", default=False)
+USE_POSTGRES = os.getenv("USE_POSTGRES", default=False)
 TESTING = os.getenv("TESTING")
 if TESTING:
     POSTGRES_SERVER = "db-test"

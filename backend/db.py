@@ -1,12 +1,10 @@
 import databases
 import sqlalchemy
-
-from settings import DATABASE_SQLITE, DATABASE_URL, USE_SQLITE
-from sqlalchemy.orm import sessionmaker
+from settings import DATABASE_SQLITE, DATABASE_URL, USE_POSTGRES
 
 metadata = sqlalchemy.MetaData()
 
-if not USE_SQLITE:
+if not USE_POSTGRES: # not
     DATABASE_URL = DATABASE_SQLITE
     database = databases.Database(DATABASE_URL)
     engine = sqlalchemy.create_engine(
@@ -15,3 +13,8 @@ if not USE_SQLITE:
 else:
     database = databases.Database(DATABASE_URL)
     engine = sqlalchemy.create_engine(DATABASE_URL)
+
+
+class Base:
+    def __init__(self, database: databases.Database):
+        self.database = database

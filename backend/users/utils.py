@@ -1,17 +1,18 @@
 from datetime import datetime, timedelta
 
-from fastapi import Depends, status, HTTPException
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-
 import settings
 from db import database
+from fastapi import Depends, HTTPException, status
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from users import schemas, user_deps
 from users.models import User
-from users.schemas import TokenPayload, OAuth2PasswordToken
 
 db_user = User(database)
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordToken(tokenUrl="/api/auth/token/login/", scheme_name="Authorize")
+oauth2_scheme = user_deps.OAuth2PasswordToken(
+    tokenUrl="/api/auth/token/login/", scheme_name="Authorize"
+)
 
 
 async def get_hashed_password(password: str) -> str:
@@ -48,7 +49,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(
             token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-        token_data = TokenPayload(**payload)
+        token_data = schemas.TokenPayload(**payload)
         if datetime.fromtimestamp(token_data.exp) < datetime.now():
             raise credentials_exception
 

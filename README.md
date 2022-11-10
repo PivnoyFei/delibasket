@@ -72,7 +72,7 @@ cd infra
 
 ### Запуск проекта
 ```bash
-docker-compose up -d backend
+docker-compose up -d --build
 ```
 
 #### Останавливаем контейнеры:

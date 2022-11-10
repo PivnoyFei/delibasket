@@ -1,25 +1,25 @@
-from fastapi import APIRouter, Depends, status
-from fastapi.responses import JSONResponse, Response
 from typing import Optional
+
 from db import database
-from users import utils, schemas
-from users.models import User, Follow
-from users.services import users_list
+from fastapi import APIRouter, Depends, status, Form
+from fastapi.responses import JSONResponse, Response
+from users import schemas, services, utils
+from users.models import Follow, User
+from fastapi.security import OAuth2PasswordRequestForm
 
 user_router = APIRouter(prefix='/api', tags=["users"])
 db_user = User(database)
 db_follow = Follow(database)
 
 
-@user_router.get("/users/")#, response_model=schemas.ListUserfull)
+@user_router.get("/users/", response_model=schemas.ListUsers)
 async def users(user_dict: User = Depends(utils.get_current_user)):
     """Список пользователей."""
     user_dict = await db_user.get_users_all(user_dict["id"])
-    print("====", user_dict)
-    return await users_list(user_dict)
+    return await services.users_list(user_dict)
 
 
-@user_router.post("/users/", response_model=schemas.GetUser)
+@user_router.post("/users/", response_model=schemas.UserRegistration)
 async def create_user(user: schemas.UserCreate):
     if await db_user.get_user_by_email(user.email):
         return JSONResponse(
@@ -37,9 +37,12 @@ async def create_user(user: schemas.UserCreate):
 
 
 @user_router.post("/auth/token/login/", response_model=schemas.UserToken)
-async def login(user: schemas.UserAuth = Depends()):
-    """Используется для авторизации по емейлу и паролю, чтобы далее использовать токен при запросах."""
-    user_dict = await db_user.get_user_password_id_by_email(user.email)
+async def login(user: schemas.UserAuth):
+    """Авторизация по емейлу и паролю, выдает токен."""
+    user = OAuth2PasswordRequestForm(
+        username=user.email, password=user.password, scope="me"
+    )
+    user_dict = await db_user.get_user_password_id_by_email(user.username)
     if not user_dict:
         return JSONResponse("Incorrect email", status.HTTP_400_BAD_REQUEST)
     if not await utils.verify_password(user.password, user_dict["password"]):
@@ -50,7 +53,7 @@ async def login(user: schemas.UserAuth = Depends()):
     )
 
 
-@user_router.get("/users/me/", response_model=schemas.Userfull)
+@user_router.get("/users/me/", response_model=schemas.User)
 async def me(user_dict: User = Depends(utils.get_current_user)):
     """Текущий пользователь."""
     return user_dict
@@ -64,10 +67,10 @@ async def subscriptions(user_dict: User = Depends(utils.get_current_user)):
     В выдачу добавляются рецепты.
     """
     results = await db_follow.is_subscribed_all(user_dict["id"])
-    return await users_list(results)
+    return await services.users_list(results)
 
 
-@user_router.get("/users/{pk}/", response_model=schemas.Userfull)
+@user_router.get("/users/{pk}/", response_model=schemas.User)
 async def user_pk(pk: int, user: User = Depends(utils.get_current_user)):
     """
     Профиль пользователя.
@@ -79,7 +82,7 @@ async def user_pk(pk: int, user: User = Depends(utils.get_current_user)):
     return user_dict
 
 
-@user_router.post("/users/{pk}/subscribe/", response_model=schemas.Userfull)
+@user_router.post("/users/{pk}/subscribe/", response_model=schemas.User)
 async def subscribe(pk: int, user_dict: User = Depends(utils.get_current_user)):
     autor_dict = await db_user.get_user_full_by_id(pk)
     if not autor_dict:
@@ -97,9 +100,7 @@ async def subscribe(pk: int, user_dict: User = Depends(utils.get_current_user)):
     await db_follow.create(user_dict["id"], pk)
     # "recipes": [],
     # "recipes_count": 0  # добавить
-    print("====", autor_dict)
     autor_dict["is_subscribed"] = True
-    print("====", autor_dict)
     return autor_dict
 
 
@@ -112,12 +113,12 @@ async def subscribe(pk: int, user_dict: User = Depends(utils.get_current_user)):
 
 
 #{
-#    "count": 2,
+#    "count": 1,
 #    "next": null,
 #    "previous": null,
 #    "results": [
 #        {
-#            "id": 2,
+#            "id": 1,
 #            "username": "string",
 #            "first_name": "string",
 #            "last_name": "string",
@@ -125,14 +126,5 @@ async def subscribe(pk: int, user_dict: User = Depends(utils.get_current_user)):
 #            "recipes": [],
 #            "recipes_count": 0
 #        },
-#        {
-#            "id": 3,
-#            "username": "strings",
-#            "first_name": "strings",
-#            "last_name": "strings",
-#            "is_subscribed": true,
-#            "recipes": [],
-#            "recipes_count": 0
-#        }
 #    ]
 #}

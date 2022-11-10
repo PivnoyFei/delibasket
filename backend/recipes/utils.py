@@ -1,14 +1,13 @@
 from datetime import datetime, timedelta
 
-from fastapi import Depends, status, HTTPException
+import settings
+from db import database
+from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import ValidationError
-
-import settings
-from db import database
 from users.models import User
-from users.schemas import TokenPayload, OAuth2PasswordToken
+from users.schemas import OAuth2PasswordToken, TokenPayload
 
 db_user = User(database)
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
