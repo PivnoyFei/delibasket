@@ -13,15 +13,18 @@
 - ```/api/auth/token/logout/``` post: Удаление токена
 - ```/api/users/set_password/``` post: Изменение пароля
 
-- ```/api/tags/``` get: Cписок тегов
-- ```/api/tags/{id}/``` get: Получение тега
-- ```/api/recipes/``` get: Список рецептов
+- ```/api/tags/``` get: Cписок тегов ✔️
+- ```/api/tags/``` post: Создание тега ✔️
+- ```/api/tags/{id}/``` get: Получение тега ✔️
+- ```/api/recipes/``` get: Список рецептов ✔️
+- ```/api/recipes/``` post: Создание рецепта ✔️
 - ```/api/recipes/download_shopping_cart/``` get: Скачать список покупок
-- ```/api/recipes/{id}/``` get: Получение рецепта
+- ```/api/recipes/{id}/``` get: Получение рецепта ✔️
 - ```/api/recipes/{id}/favorite/``` post: Добавить рецепт в избранное
 - ```/api/recipes/{id}/shopping_cart/``` post:  Добавить рецепт в список покупок
-- ```/api/ingredients/``` get: Список ингредиентов
-- ```/api/ingredients/{id}/``` get: Получение ингредиента
+- ```/api/ingredients/``` get: Список ингредиентов ✔️
+- ```/api/ingredients/``` post: Создание ингредиента ✔️
+- ```/api/ingredients/{id}/``` get: Получение ингредиента ✔️
 
 
 ## Описание
@@ -84,6 +87,8 @@ docker-compose down -v
 ```bash
 uvicorn main:app --reload
 ```
+
+python load_json.py
 
 #### Автор
 [Смелов Илья](https://github.com/PivnoyFei)

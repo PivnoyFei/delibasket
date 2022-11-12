@@ -1,13 +1,15 @@
-from typing import Optional
-
-from db import database
-from fastapi import APIRouter, Depends, status, Form
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse, Response
-from users import schemas, services, utils
-from users.models import Follow, User
 from fastapi.security import OAuth2PasswordRequestForm
 
+from db import database
+from recipes.models import Recipe
+from services import query_list
+from users import schemas, utils
+from users.models import Follow, User
+
 user_router = APIRouter(prefix='/api', tags=["users"])
+db_recipe = Recipe(database)
 db_user = User(database)
 db_follow = Follow(database)
 
@@ -15,8 +17,8 @@ db_follow = Follow(database)
 @user_router.get("/users/", response_model=schemas.ListUsers)
 async def users(user_dict: User = Depends(utils.get_current_user)):
     """Список пользователей."""
-    user_dict = await db_user.get_users_all(user_dict["id"])
-    return await services.users_list(user_dict)
+    user_dict = await db_user.get_users(user_dict["id"])
+    return await query_list(user_dict)
 
 
 @user_router.post("/users/", response_model=schemas.UserRegistration)
@@ -53,7 +55,7 @@ async def login(user: schemas.UserAuth):
     )
 
 
-@user_router.get("/users/me/", response_model=schemas.User)
+@user_router.get("/users/me/", response_model=schemas.UserSchemas)
 async def me(user_dict: User = Depends(utils.get_current_user)):
     """Текущий пользователь."""
     return user_dict
@@ -67,26 +69,36 @@ async def subscriptions(user_dict: User = Depends(utils.get_current_user)):
     В выдачу добавляются рецепты.
     """
     results = await db_follow.is_subscribed_all(user_dict["id"])
-    return await services.users_list(results)
+    if results:
+        results = [dict(i) for i in results]
+        for user in results:
+            recipes = await db_recipe.get_recipe_by_author(user["id"])
+            user["recipes"] = recipes
+            user["recipes_count"] = len(recipes)
+        return await query_list(results)
+    return Response(status_code=status.HTTP_401_UNAUTHORIZED)
 
 
-@user_router.get("/users/{pk}/", response_model=schemas.User)
-async def user_pk(pk: int, user: User = Depends(utils.get_current_user)):
-    """
-    Профиль пользователя.
-    Доступно всем пользователям.
-    """
-    user_dict = await db_user.get_user_full_by_id(pk)
-    if not user_dict:
-        return JSONResponse("Incorrect user", status.HTTP_400_BAD_REQUEST)
-    return user_dict
+@user_router.get("/users/{pk}/", response_model=schemas.UserSchemas)
+async def user_id(pk: int, user_dict: User = Depends(utils.get_current_user)):
+    """Профиль пользователя. Доступно всем пользователям."""
+    if user_dict:
+        user_dict = await db_user.get_user_full_by_id_auth(pk, user_dict["id"])
+    else:
+        user_dict = await db_user.get_user_full_by_id(pk)
+    print(user_dict)
+    return user_dict or JSONResponse(
+        {"detail": "NotFound"}, status.HTTP_404_NOT_FOUND)
 
 
-@user_router.post("/users/{pk}/subscribe/", response_model=schemas.User)
-async def subscribe(pk: int, user_dict: User = Depends(utils.get_current_user)):
+@user_router.post("/users/{pk}/subscribe/", response_model=schemas.Follow)
+async def create_subscribe(
+    pk: int,
+    user_dict: User = Depends(utils.get_current_user)
+):
     autor_dict = await db_user.get_user_full_by_id(pk)
     if not autor_dict:
-        return JSONResponse("Incorrect user", status.HTTP_400_BAD_REQUEST)
+        return JSONResponse({"detail": "NotFound"}, status.HTTP_404_NOT_FOUND)
     if pk == user_dict["id"]:
         return JSONResponse(
             {'errors': 'It is forbidden to unfollow or follow yourself.'},
@@ -98,33 +110,17 @@ async def subscribe(pk: int, user_dict: User = Depends(utils.get_current_user)):
             status.HTTP_400_BAD_REQUEST
         )
     await db_follow.create(user_dict["id"], pk)
-    # "recipes": [],
-    # "recipes_count": 0  # добавить
     autor_dict["is_subscribed"] = True
+    recipes = await db_recipe.get_recipe_by_author(pk)
+    autor_dict["recipes"] = recipes
+    autor_dict["recipes_count"] = len(recipes)
     return autor_dict
 
 
 @user_router.delete("/users/{pk}/subscribe/")
-async def subscribe(pk: int, user_dict: User = Depends(utils.get_current_user)):
+async def subscribe(
+    pk: int,
+    user_dict: User = Depends(utils.get_current_user)
+):
     if await db_follow.delete(user_dict["id"], pk):
-        return Response(
-            status=status.HTTP_204_NO_CONTENT
-        )
-
-
-#{
-#    "count": 1,
-#    "next": null,
-#    "previous": null,
-#    "results": [
-#        {
-#            "id": 1,
-#            "username": "string",
-#            "first_name": "string",
-#            "last_name": "string",
-#            "is_subscribed": true,
-#            "recipes": [],
-#            "recipes_count": 0
-#        },
-#    ]
-#}
+        return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,9 +1,12 @@
-from databases import Database
-from db import metadata, Base
-from recipes import schemas
+from sqlite3 import IntegrityError
+
+from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy import (CheckConstraint, Column, DateTime, ForeignKey, Integer,
-                        String, Table, Text, UniqueConstraint, select)
+                        String, Table, Text, UniqueConstraint, case, select)
 from sqlalchemy.sql import func
+
+from db import Base, metadata
+from users.models import User
 
 ingredient = Table(
     "ingredient", metadata,
@@ -57,30 +60,153 @@ amount_ingredient = Table(
     Column("recipe_id", Integer, ForeignKey("recipe.id")),
     Column("amount", Integer),
     CheckConstraint('amount > 0', name='amount_check'),
-    UniqueConstraint('ingredient_id', 'recipe_id', name='unique_for_amount_ingredient')
+    UniqueConstraint(
+        'ingredient_id', 'recipe_id', name='unique_for_amount_ingredient')
 )
 
 
 class Tag(Base):
-    async def create_tag(self, tag):
-        query = tag.insert().values(
-            name=tag.name,
-            color=tag.color,
-            slug=tag.slug,
+    async def create_tag(self, tag_items):
+        try:
+            query = tag.insert().values(
+                name=tag_items.name,
+                color=tag_items.color,
+                slug=tag_items.slug,
+            )
+            return await self.database.execute(query)
+        except (IntegrityError, UniqueViolationError) as e:
+            return e
+
+    async def get_tags(self, pk: int = None) -> list | None:
+        query = select([tag])
+        if pk:
+            query = query.where(tag.c.id == pk)
+            return await self.database.fetch_one(query)
+        return await self.database.fetch_all(query)
+
+    async def get_tags_by_recipe_id(self, pk: int):
+        tags_dict = (
+            select([tag])
+            .join(recipe_tag, recipe_tag.c.tag_id == tag.c.id)
+            .where(recipe_tag.c.recipe_id == pk)
         )
-        return await self.database.execute(query)
+        return await self.database.fetch_all(tags_dict)
+
+
+class Ingredient(Base):
+    async def create_ingredient(self, ingredient_items) -> int:
+        try:
+            query = ingredient.insert().values(
+                name=ingredient_items.name,
+                measurement_unit=ingredient_items.measurement_unit,
+            )
+            return await self.database.execute(query)
+        except (IntegrityError, UniqueViolationError) as e:
+            return e
+
+    async def get_ingredient(self, pk: int = None) -> list | None:
+        query = select([ingredient])
+        if pk:
+            query = query.where(ingredient.c.id == pk)
+            return await self.database.fetch_one(query)
+        return await self.database.fetch_all(query)
+
+
+class Amount(Base):
+    async def get_amount_by_recipe_id(self, pk: int):
+        amount_dict = (
+            select([ingredient, amount_ingredient.c.amount])
+            .join(
+                ingredient,
+                amount_ingredient.c.ingredient_id == ingredient.c.id
+            )
+            .where(amount_ingredient.c.recipe_id == pk)
+        )
+        return await self.database.fetch_all(amount_dict)
 
 
 class Recipe(Base):
-    async def create_recipe(self, user) -> int:
-        query = recipe.insert().values(
-            email=user.email,
-            password=user.password,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            is_active=True,
-            is_staff=False,
-            is_superuser=False
+    async def create_recipe(
+        self, name, text, image, cooking_time, ingredients, tags, users_id
+    ):
+
+        try:
+            recipe_id = await self.database.execute(
+                recipe.insert()
+                .values(
+                    author_id=users_id,
+                    name=name,
+                    text=text,
+                    image=image,
+                    cooking_time=cooking_time
+                )
+            )
+
+            tags = [{"recipe_id": recipe_id, "tag_id": i} for i in tags]
+            await self.database.execute(recipe_tag.insert().values(tags))
+
+            ingredients = [
+                {
+                    "recipe_id": recipe_id,
+                    "ingredient_id": i.ingredient_id,
+                    "amount": i.amount
+                }
+                for i in ingredients
+            ]
+            await self.database.execute(
+                amount_ingredient.insert().values(ingredients)
+            )
+            return recipe_id
+
+        except (IntegrityError, UniqueViolationError) as e:
+            return e
+
+    async def get_recipe_by_author(self, pk: int):
+        return await self.database.fetch_all(
+            select(
+                recipe.c.id,
+                recipe.c.name,
+                recipe.c.image,
+                recipe.c.cooking_time,
+            )
+            .where(recipe.c.author_id == pk)
         )
-        return await self.database.execute(query)
+
+    async def get_recipe_by_id(self, pk: int, auth: int = None):
+        query = (
+            select(
+                recipe.c.id,
+                recipe.c.name,
+                recipe.c.image,
+                recipe.c.id.label("tags"),
+                recipe.c.author_id.label("author"),
+                recipe.c.id.label("ingredients"),
+                recipe.c.text,
+                recipe.c.cooking_time,
+                case([(favorites.c.user_id == recipe.c.author_id, "True")],
+                     else_="False").label("is_favorited"),
+                case([(cart.c.user_id == recipe.c.author_id, "True")],
+                     else_="False").label("is_in_shopping_cart")
+            )
+            .join(favorites, favorites.c.recipe_id == recipe.c.id, full=True)
+            .join(cart, cart.c.recipe_id == recipe.c.id, full=True)
+        )
+        if pk:
+            query = query.where(recipe.c.id == pk)
+        query = await self.database.fetch_all(query)
+
+        if not query:
+            return None
+
+        query = [dict(i) for i in query]
+        for r in query:
+            r["ingredients"] = await Amount.get_amount_by_recipe_id(
+                self, r["id"])
+            r["tags"] = await Tag.get_tags_by_recipe_id(self, r["id"])
+            r["author"] = await User.get_user_full_by_id_auth(
+                self, r["author"], auth)
+        return query
+
+    async def delete_recipe(self, pk: int):
+        query = recipe.delete().where(recipe.c.id == pk)
+        await self.database.execute(query)

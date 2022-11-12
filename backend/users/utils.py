@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 
-import settings
-from db import database
 from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+
+import settings
+from db import database
 from users import schemas, user_deps
 from users.models import User
 
@@ -34,7 +35,8 @@ async def create_access_token(email: str, expires_delta: int = None) -> str:
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
     to_encode = {"exp": expires_delta, "sub": str(email)}
-    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, settings.ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.JWT_SECRET_KEY, settings.ALGORITHM)
     return encoded_jwt
 
 

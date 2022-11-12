@@ -1,5 +1,5 @@
 from typing import Optional
-#from fastapi.param_functions import Form
+
 from fastapi import Form
 from pydantic import BaseModel, EmailStr
 
@@ -24,7 +24,7 @@ class UserToken(BaseModel):
     auth_token: str
 
 
-class User(BaseModel):
+class UserSchemas(BaseModel):
     id: int
     email: EmailStr
     username: str
@@ -33,18 +33,30 @@ class User(BaseModel):
     is_subscribed: Optional[str | bool] = False
 
 
-class ListUsers(BaseModel):
+class UserBase(BaseModel):
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+    is_subscribed: bool = False
+
+
+class Body(BaseModel):
     count: int
-    results: list[User] = []
+    next: bool = None
+    previous: bool = None
 
 
-class Follow(User):
+class ListUsers(Body):
+    results: list[UserSchemas] = []
+
+
+class Follow(UserBase):
     recipes: Optional[list] = []
     recipes_count: Optional[int] = 0
 
 
-class Subscriptions(BaseModel):
-    count: int
+class Subscriptions(Body):
     results: list[Follow] = []
 
 

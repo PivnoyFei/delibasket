@@ -1,8 +1,8 @@
-from databases import Database
-from db import metadata, Base
 from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, String,
                         Table, UniqueConstraint, case, select)
 from sqlalchemy.sql import func
+
+from db import Base, metadata
 from users.schemas import UserCreate
 
 users = Table(
@@ -29,18 +29,14 @@ follow = Table(
 
 
 class User(Base):
-    async def get_users_all(self, pk: int):
+    async def get_users(self, pk: int):
         query = (
-            select(
-                users.c.id,
-                users.c.email,
-                users.c.username,
-                users.c.first_name,
-                users.c.last_name,
-                case([(follow.c.user_id == pk, 'True')], else_='False')
-                .label("is_subscribed")
-            )
-            .join_from(follow, users, users.c.id == follow.c.author_id, full=True)
+            select([
+                    users,
+                    case([(follow.c.user_id == pk, "True")], else_="False")
+                    .label("is_subscribed")
+            ])
+            .join(follow, users.c.id == follow.c.author_id, full=True)
             .where(users.c.is_active == True)
             .order_by(users.c.id)
         )
@@ -61,15 +57,24 @@ class User(Base):
         return await self.database.fetch_one(query)
 
     async def get_user_full_by_id(self, pk: int):
-        query = select([users]).where(users.c.id == pk)
+        query = (select([users]).where(users.c.id == pk))
         return dict(await self.database.fetch_one(query))
 
-        #"id": 1,
-        #"email": "kekki@fake.fake",
-        #"username": "kekki",
-        #"first_name": "kekki",
-        #"last_name": "kekki",
-        #"is_subscribed": false
+    async def get_user_full_by_id_auth(self, pk: int, user_id: int):
+        query = await self.database.fetch_one(
+            select(
+                users.c.id,
+                users.c.email,
+                users.c.username,
+                users.c.first_name,
+                users.c.last_name,
+                case([(follow.c.user_id == user_id, "True")],
+                     else_="False").label("is_subscribed")
+            )
+            .join(follow, users.c.id == follow.c.author_id, full=True)
+            .where(users.c.id == pk)
+        )
+        return dict(query) if query else None
 
     async def create_user(self, user: UserCreate) -> int:
         query = users.insert().values(
@@ -103,7 +108,6 @@ class Follow(Base):
         query = (
             select(
                 users.c.id,
-                users.c.email,
                 users.c.username,
                 users.c.first_name,
                 users.c.last_name,
@@ -113,14 +117,15 @@ class Follow(Base):
             .join_from(follow, users, users.c.id == follow.c.author_id)
             .where(follow.c.user_id == user_id, users.c.is_active == True)
         )
+        print(query)
         return await self.database.fetch_all(query)
 
     async def create(self, user_id: int, author_id: int):
-        query = follow.insert().values(user_id=user_id, author_id=author_id)
+        query = follow.insert().values(
+            user_id=user_id, author_id=author_id)
         await self.database.execute(query)
 
     async def delete(self, user_id: int, author_id: int):
         query = follow.delete().where(
-            follow.c.user_id == user_id, follow.c.author_id == author_id
-        )
+            follow.c.user_id == user_id, follow.c.author_id == author_id)
         await self.database.execute(query)

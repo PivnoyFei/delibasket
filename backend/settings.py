@@ -16,7 +16,6 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", default="postgres")
 POSTGRES_SERVER = os.getenv("POSTGRES_SERVER", default="localhost")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", default="5432")
 
-USE_POSTGRES = os.getenv("USE_POSTGRES", default=False)
 TESTING = os.getenv("TESTING")
 if TESTING:
     POSTGRES_SERVER = "db-test"
@@ -25,7 +24,5 @@ DATABASE_URL = (f"postgresql://{POSTGRES_USER}:"
                 f"{POSTGRES_SERVER}:"
                 f"{POSTGRES_PORT}/"
                 f"{POSTGRES_DB}")
-
-DATABASE_SQLITE = "sqlite:///sqlite.db"
 
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), "static/")
