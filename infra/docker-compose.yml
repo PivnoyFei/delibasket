@@ -29,9 +29,7 @@ services:
       - db
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: kekkisama/frontend:latest
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:

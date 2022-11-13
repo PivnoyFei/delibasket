@@ -1,5 +1,3 @@
-from sqlite3 import IntegrityError
-
 from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy import (CheckConstraint, Column, DateTime, ForeignKey, Integer,
                         String, Table, Text, UniqueConstraint, case, select)
@@ -25,7 +23,7 @@ tag = Table(
 recipe = Table(
     "recipe", metadata,
     Column("id", Integer, primary_key=True),
-    Column("author_id", Integer, ForeignKey("users.id")),
+    Column("author_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
     Column("name", String(200), unique=True, index=True),
     Column("image", String(200), unique=True),
     Column("text", Text),
@@ -36,28 +34,28 @@ recipe = Table(
 recipe_tag = Table(
     "recipe_tag", metadata,
     Column("id", Integer, primary_key=True),
-    Column("recipe_id", Integer, ForeignKey("recipe.id")),
-    Column("tag_id", Integer, ForeignKey("tag.id")),
+    Column("recipe_id", Integer, ForeignKey("recipe.id", ondelete='CASCADE')),
+    Column("tag_id", Integer, ForeignKey("tag.id", ondelete='CASCADE')),
 )
 favorites = Table(
     "favorites", metadata,
     Column("id", Integer, primary_key=True),
-    Column("user_id", Integer, ForeignKey("users.id")),
-    Column("recipe_id", Integer, ForeignKey("recipe.id")),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
+    Column("recipe_id", Integer, ForeignKey("recipe.id", ondelete='CASCADE')),
     UniqueConstraint('user_id', 'recipe_id', name='unique_for_favorite')
 )
 cart = Table(
     "cart", metadata,
     Column("id", Integer, primary_key=True),
-    Column("user_id", Integer, ForeignKey("users.id")),
-    Column("recipe_id", Integer, ForeignKey("recipe.id")),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
+    Column("recipe_id", Integer, ForeignKey("recipe.id", ondelete='CASCADE')),
     UniqueConstraint('user_id', 'recipe_id', name='unique_for_cart')
 )
 amount_ingredient = Table(
     "amount_ingredient", metadata,
     Column("id", Integer, primary_key=True),
-    Column("ingredient_id", Integer, ForeignKey("ingredient.id")),
-    Column("recipe_id", Integer, ForeignKey("recipe.id")),
+    Column("ingredient_id", Integer, ForeignKey("ingredient.id", ondelete='CASCADE')),
+    Column("recipe_id", Integer, ForeignKey("recipe.id", ondelete='CASCADE')),
     Column("amount", Integer),
     CheckConstraint('amount > 0', name='amount_check'),
     UniqueConstraint(
@@ -67,6 +65,7 @@ amount_ingredient = Table(
 
 class Tag(Base):
     async def create_tag(self, tag_items):
+        print("tag_items", tag_items)
         try:
             query = tag.insert().values(
                 name=tag_items.name,
@@ -74,7 +73,7 @@ class Tag(Base):
                 slug=tag_items.slug,
             )
             return await self.database.execute(query)
-        except (IntegrityError, UniqueViolationError) as e:
+        except UniqueViolationError as e:
             return e
 
     async def get_tags(self, pk: int = None) -> list | None:
@@ -101,7 +100,7 @@ class Ingredient(Base):
                 measurement_unit=ingredient_items.measurement_unit,
             )
             return await self.database.execute(query)
-        except (IntegrityError, UniqueViolationError) as e:
+        except UniqueViolationError as e:
             return e
 
     async def get_ingredient(self, pk: int = None) -> list | None:
@@ -127,19 +126,13 @@ class Amount(Base):
 
 class Recipe(Base):
     async def create_recipe(
-        self, name, text, image, cooking_time, ingredients, tags, users_id
+        self, recipe_item, ingredients, tags
     ):
 
         try:
             recipe_id = await self.database.execute(
                 recipe.insert()
-                .values(
-                    author_id=users_id,
-                    name=name,
-                    text=text,
-                    image=image,
-                    cooking_time=cooking_time
-                )
+                .values(**recipe_item)
             )
 
             tags = [{"recipe_id": recipe_id, "tag_id": i} for i in tags]
@@ -158,7 +151,7 @@ class Recipe(Base):
             )
             return recipe_id
 
-        except (IntegrityError, UniqueViolationError) as e:
+        except UniqueViolationError as e:
             return e
 
     async def get_recipe_by_author(self, pk: int):

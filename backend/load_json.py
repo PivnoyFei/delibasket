@@ -4,9 +4,7 @@ import os
 import sqlalchemy
 
 from recipes.models import ingredient, tag
-from settings import DATABASE_URL
-
-DATA_ROOT = os.path.join(os.path.dirname(__file__), "data/")
+from settings import DATA_ROOT, DATABASE_URL
 
 engine = sqlalchemy.create_engine(DATABASE_URL)
 engine.connect()

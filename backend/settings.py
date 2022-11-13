@@ -1,14 +1,15 @@
 import os
 
 from dotenv import load_dotenv
+from fastapi import status
+from fastapi.responses import JSONResponse
 
 load_dotenv()
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 ALGORITHM = os.getenv("ALGORITHM", default="HS256")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", default="key")
-JWT_REFRESH_SECRET_KEY = os.getenv("JWT_REFRESH_SECRET_KEY", default="key")
 
 POSTGRES_DB = os.getenv("POSTGRES_DB", default="postgres")
 POSTGRES_USER = os.getenv("POSTGRES_USER", default="postgres")
@@ -26,3 +27,7 @@ DATABASE_URL = (f"postgresql://{POSTGRES_USER}:"
                 f"{POSTGRES_DB}")
 
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), "static/")
+DATA_ROOT = os.path.join(os.path.dirname(__file__), "data/")
+
+NOT_AUTHENTICATED = JSONResponse({"detail": "Not authenticated"}, status.HTTP_401_UNAUTHORIZED)
+NOT_FOUND = JSONResponse({"detail": "NotFound"}, status.HTTP_404_NOT_FOUND)

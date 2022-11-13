@@ -9,8 +9,10 @@ from starlette.requests import Request
 class OAuth2PasswordToken(OAuth2PasswordBearer):
     async def __call__(self, request: Request) -> Optional[str]:
         authorization: str = request.headers.get("Authorization")
+        if not authorization:
+            return None
         scheme, param = get_authorization_scheme_param(authorization)
-        if not authorization or scheme.lower() != "token":
+        if scheme.lower() != "token":
             if self.auto_error:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,

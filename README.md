@@ -1,6 +1,6 @@
 <h1 align="center"><a target="_blank" href="">Проект Продуктовый помошник</a></h1>
 
-![FoodgramFastAPI workflow](https://github.com/PivnoyFei/ ... /actions/workflows/main.yml/badge.svg)
+![FoodgramFastAPI workflow](https://github.com/PivnoyFei/foodgram_fasapi/actions/workflows/main.yml/badge.svg)
 
 
 ## Прогрес
@@ -9,6 +9,7 @@
 - ```/api/users/me/``` get: Текущий пользователь ✔️
 - ```/api/users/subscriptions/``` get: Мои подписки ✔️
 - ```/api/users/{id}/subscribe/``` post: Подписаться на пользователя ✔️
+- ```/api/users/{id}/subscribe/``` delete: Отписаться от пользователя ✔️
 - ```/api/auth/token/login/``` post: Получить токен авторизации ✔️
 - ```/api/auth/token/logout/``` post: Удаление токена
 - ```/api/users/set_password/``` post: Изменение пароля
@@ -18,6 +19,7 @@
 - ```/api/tags/{id}/``` get: Получение тега ✔️
 - ```/api/recipes/``` get: Список рецептов ✔️
 - ```/api/recipes/``` post: Создание рецепта ✔️
+- ```/api/recipes/``` delete: Удаление рецепта ✔️
 - ```/api/recipes/download_shopping_cart/``` get: Скачать список покупок
 - ```/api/recipes/{id}/``` get: Получение рецепта ✔️
 - ```/api/recipes/{id}/favorite/``` post: Добавить рецепт в избранное
@@ -37,7 +39,7 @@
 ### Запуск проекта
 Клонируем репозиторий и переходим в него:
 ```bash
-git clone https://github.com/PivnoyFei/
+git clone https://github.com/PivnoyFei/foodgram_fasapi.git
 cd frames_fastapi
 ```
 #### Создаем и активируем виртуальное окружение:

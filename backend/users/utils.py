@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, status
+from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from pydantic import ValidationError
 
 import settings
 from db import database
@@ -40,13 +42,14 @@ async def create_access_token(email: str, expires_delta: int = None) -> str:
     return encoded_jwt
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(token: str | None = Depends(oauth2_scheme)):
     """Проверяет текущего авторизированного пользователя."""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid authentication credentials",
-        headers={"WWW-Authenticate": "Token"},
+    credentials_exception = JSONResponse(
+        {"detail": "Invalid authentication credentials"},
+        status.HTTP_401_UNAUTHORIZED
     )
+    if not token:
+        return None
     try:
         payload = jwt.decode(
             token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM]
@@ -55,10 +58,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         if datetime.fromtimestamp(token_data.exp) < datetime.now():
             raise credentials_exception
 
-    except JWTError:
+    except (JWTError, ValidationError):
         raise credentials_exception
 
     user = await db_user.get_user_full_by_id(token_data.sub)
     if user:
         return user
-    return credentials_exception
+    raise credentials_exception

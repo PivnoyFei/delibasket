@@ -29,19 +29,19 @@ follow = Table(
 
 
 class User(Base):
-    async def get_users(self, pk: int):
+    async def get_users(self, pk: int | None):
+        print(pk)
         query = (
             select([
-                    users,
-                    case([(follow.c.user_id == pk, "True")], else_="False")
-                    .label("is_subscribed")
+                users,
+                case([(follow.c.user_id == pk, "True")], else_="False")
+                .label("is_subscribed")
             ])
             .join(follow, users.c.id == follow.c.author_id, full=True)
             .where(users.c.is_active == True)
             .order_by(users.c.id)
         )
-        query = await self.database.fetch_all(query)
-        return query
+        return await self.database.fetch_all(query)
 
     async def get_user_by_email(self, email: str) -> int | None:
         query = select(users.c.id).where(users.c.email == email)
@@ -58,7 +58,7 @@ class User(Base):
 
     async def get_user_full_by_id(self, pk: int):
         query = (select([users]).where(users.c.id == pk))
-        return dict(await self.database.fetch_one(query))
+        return await self.database.fetch_one(query)
 
     async def get_user_full_by_id_auth(self, pk: int, user_id: int):
         query = await self.database.fetch_one(
