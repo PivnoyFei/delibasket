@@ -1,26 +1,26 @@
 from typing import Optional
 
-from fastapi import Form
-from pydantic import BaseModel, EmailStr
+from fastapi import HTTPException, status
+from pydantic import BaseModel, EmailStr, Field, root_validator
 
 
 class UserRegistration(BaseModel):
-    email: EmailStr
-    username: str = Form(min_length=5, max_length=150)
-    first_name: str = Form(max_length=255)
-    last_name: str = Form(max_length=255)
+    email: EmailStr = Field(...,)
+    username: str = Field(..., min_length=5, max_length=150)
+    first_name: str = Field(..., max_length=255)
+    last_name: str = Field(..., max_length=255)
 
 
 class UserCreate(UserRegistration):
-    password: str = Form(min_length=5, max_length=255)
+    password: str = Field(..., min_length=5, max_length=255)
 
 
 class UserAuth(BaseModel):
-    email: str = Form()
-    password: str = Form()
+    email: EmailStr = Field(...,)
+    password: str = Field(...,)
 
 
-class UserToken(BaseModel):
+class TokenBase(BaseModel):
     auth_token: str
 
 
@@ -30,7 +30,7 @@ class UserSchemas(BaseModel):
     username: str
     first_name: str
     last_name: str
-    is_subscribed: Optional[str | bool] = False
+    is_subscribed: bool = False
 
 
 class UserBase(BaseModel):
@@ -61,11 +61,15 @@ class Subscriptions(Body):
 
 
 class SetPassword(BaseModel):
-    password: str
-    last_name: str
-    email: str
+    pas_old: str = Field(..., description="old password")
+    pas_one: str = Field(..., description="New Password")
+    pas_two: str = Field(..., description="Repeat password")
 
-
-class TokenPayload(BaseModel):
-    sub: int = None
-    exp: int = None
+    @root_validator()
+    def validator(cls, values):
+        if (values["pas_one"] != values["pas_two"]
+                or values["pas_old"] == values["pas_one"]):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, "Incorrect password"
+            )
+        return values

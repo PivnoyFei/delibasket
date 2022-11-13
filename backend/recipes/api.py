@@ -1,17 +1,18 @@
 import os
 
 import aiofiles
+from asyncpg.exceptions import UniqueViolationError
 from fastapi import APIRouter, Body, Depends, File, Form, UploadFile, status
 from fastapi.responses import JSONResponse, Response
+from starlette.requests import Request
 
 from db import database
 from recipes import schemas
 from recipes.models import Ingredient, Recipe, Tag
 from services import query_list
-from settings import STATIC_ROOT, NOT_FOUND
+from settings import MEDIA_ROOT, NOT_AUTHENTICATED, NOT_FOUND
 from users.models import User
 from users.utils import get_current_user
-from starlette.requests import Request
 
 recipe_router = APIRouter(prefix='/api', tags=["recipe"])
 db_user = User(database)
@@ -35,12 +36,6 @@ async def create_tag(tag: schemas.Tag, user: User = Depends(get_current_user)):
     return await __create_tag_ingredient(db_tag.create_tag, tag, user)
 
 
-@recipe_router.get("/tags/")
-@recipe_router.get("/tags/{pk}/")
-async def tags(pk: int = None):
-    return await db_tag.get_tags(pk) or NOT_FOUND
-
-
 @recipe_router.post("/ingredients/")
 async def create_ingredient(
     ingredient: schemas.Ingredient,
@@ -48,6 +43,12 @@ async def create_ingredient(
 ):
     return await __create_tag_ingredient(
         db_ingredient.create_ingredient, ingredient, user)
+
+
+@recipe_router.get("/tags/")
+@recipe_router.get("/tags/{pk}/")
+async def tags(pk: int = None):
+    return await db_tag.get_tags(pk) or NOT_FOUND
 
 
 @recipe_router.get("/ingredients/")
@@ -64,8 +65,20 @@ async def create_recipe(
     cooking_time: int = Form(...),
     ingredients: list[schemas.AmountIngredient] = Body(...),
     tags: list[int] = Form(...),
-    user_dict: User = Depends(get_current_user)
+    user: User = Depends(get_current_user)
 ):
+    if not user:
+        return NOT_AUTHENTICATED
+    for i in tags:
+        if not await db_tag.get_tags(i):
+            return JSONResponse(
+                {"detail": f"Not {i}"}, status.HTTP_404_NOT_FOUND
+            )
+    for i in ingredients:
+        if not await db_ingredient.get_ingredient(i.ingredient_id):
+            return JSONResponse(
+                {"detail": f"Not {i.ingredient_id}"}, status.HTTP_404_NOT_FOUND
+            )
 
     filename = image.filename
     if not filename.lower().endswith(('.jpg', '.jpeg', '.bmp', '.png')):
@@ -74,34 +87,39 @@ async def create_recipe(
 
     try:
         async with aiofiles.open(
-            os.path.join(STATIC_ROOT, filename), "wb"
+            os.path.join(MEDIA_ROOT, filename), "wb"
         ) as buffer:
             await buffer.write(await image.read())
-    except Exception:
-        buffer = os.path.join(STATIC_ROOT, filename)
+
+            recipe_item = {
+                "author_id": user.id,
+                "name": name,
+                "text": text,
+                "image": filename,
+                "cooking_time": cooking_time
+            }
+            pk = await db_recipe.create_recipe(
+                recipe_item, ingredients, tags
+            )
+            return await db_recipe.get_recipe_by_id(pk)
+
+    except (Exception, UniqueViolationError):
+        buffer = os.path.join(MEDIA_ROOT, filename)
         if os.path.isfile(buffer):
             os.remove(buffer)
         return JSONResponse(
             {"detail": "Error image"}, status.HTTP_400_BAD_REQUEST)
 
-    recipe_item = {
-        "author_id": user_dict["id"],
-        "name": name,
-        "text": text,
-        "image": filename,
-        "cooking_time": cooking_time
-    }
-    pk = await db_recipe.create_recipe(
-        recipe_item, ingredients, tags
-    )
-    return await db_recipe.get_recipe_by_id(pk)
-
 
 @recipe_router.get("/recipes/")
 @recipe_router.get("/recipes/{pk}/")
 @recipe_router.delete("/recipes/{pk}/")
-async def recipes(request: Request, pk: int = None):
+async def recipes(
+    request: Request, pk: int = None, user: User = Depends(get_current_user)
+):
     if request.method == "DELETE":
+        if not user:
+            return NOT_AUTHENTICATED
         await db_recipe.delete_recipe(pk)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     if pk:

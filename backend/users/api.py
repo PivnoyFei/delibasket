@@ -6,17 +6,19 @@ from db import database
 from recipes.models import Recipe
 from services import query_list
 from settings import NOT_AUTHENTICATED, NOT_FOUND
-from users import schemas, utils
-from users.models import Follow, User
+from users import schemas
+from users.models import Follow, Token, User
+from users.utils import get_current_user, get_hashed_password, verify_password
 
 user_router = APIRouter(prefix='/api', tags=["users"])
 db_recipe = Recipe(database)
 db_user = User(database)
 db_follow = Follow(database)
+db_token = Token(database)
 
 
 @user_router.get("/users/", response_model=schemas.ListUsers)
-async def users(user: User = Depends(utils.get_current_user)):
+async def users(user: User = Depends(get_current_user)):
     """Список пользователей."""
     user = await db_user.get_users(user.id if user else None)
     return await query_list(user)
@@ -34,12 +36,12 @@ async def create_user(user: schemas.UserCreate):
             {"detail": "Username already exists"},
             status.HTTP_400_BAD_REQUEST
         )
-    user.password = await utils.get_hashed_password(user.password)
+    user.password = await get_hashed_password(user.password)
     user_id = await db_user.create_user(user)
     return await db_user.get_user_full_by_id(user_id)
 
 
-@user_router.post("/auth/token/login/", response_model=schemas.UserToken)
+@user_router.post("/auth/token/login/", response_model=schemas.TokenBase)
 async def login(user: schemas.UserAuth):
     """Авторизация по емейлу и паролю, выдает токен."""
     user = OAuth2PasswordRequestForm(
@@ -48,27 +50,42 @@ async def login(user: schemas.UserAuth):
     user_dict = await db_user.get_user_password_id_by_email(user.username)
     if not user_dict:
         return JSONResponse("Incorrect email", status.HTTP_400_BAD_REQUEST)
-    if not await utils.verify_password(user.password, user_dict["password"]):
+    if not await verify_password(user.password, user_dict.password):
         return JSONResponse("Incorrect password", status.HTTP_400_BAD_REQUEST)
     return JSONResponse(
-        {"auth_token": await utils.create_access_token(user_dict["id"])},
+        {"auth_token": f"{await db_token.create_token(user_dict.id)}"},
         status.HTTP_200_OK
     )
 
 
+@user_router.post("/auth/token/logout/")
+async def logout(user: User = Depends(get_current_user)):
+    if not user:
+        return NOT_AUTHENTICATED
+    await db_token.delete_token(user.id)
+
+
 @user_router.get("/users/me/", response_model=schemas.UserSchemas)
-async def me(user: User = Depends(utils.get_current_user)):
+async def me(user: User = Depends(get_current_user)):
     """Текущий пользователь."""
-    return user or NOT_AUTHENTICATED
+    return {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name
+    } or NOT_AUTHENTICATED
 
 
 @user_router.get("/users/subscriptions/", response_model=schemas.Subscriptions)
-async def subscriptions(user: User = Depends(utils.get_current_user)):
+async def subscriptions(user: User = Depends(get_current_user)):
     """
     Мои подписки.
     Возвращает пользователей, на которых подписан текущий пользователь.
     В выдачу добавляются рецепты.
     """
+    if not user:
+        return NOT_AUTHENTICATED
     results = await db_follow.is_subscribed_all(user.id)
     if results:
         results = [dict(i) for i in results]
@@ -80,8 +97,20 @@ async def subscriptions(user: User = Depends(utils.get_current_user)):
     return Response(status_code=status.HTTP_401_UNAUTHORIZED)
 
 
+@user_router.post("/users/set_password/")
+async def set_password(
+    user_pas: schemas.SetPassword, user: User = Depends(get_current_user)
+):
+    if not user:
+        return NOT_AUTHENTICATED
+    if not await verify_password(user_pas.pas_old, user.password):
+        return JSONResponse("Incorrect password", status.HTTP_400_BAD_REQUEST)
+    password_hashed = await get_hashed_password(user_pas.pas_two)
+    return await db_user.update_user(password_hashed, user.id)
+
+
 @user_router.get("/users/{pk}/", response_model=schemas.UserSchemas)
-async def user_id(pk: int, user: User = Depends(utils.get_current_user)):
+async def user_id(pk: int, user: User = Depends(get_current_user)):
     """Профиль пользователя. Доступно всем пользователям."""
     if user:
         user = await db_user.get_user_full_by_id_auth(pk, user.id)
@@ -92,8 +121,8 @@ async def user_id(pk: int, user: User = Depends(utils.get_current_user)):
 
 @user_router.post("/users/{pk}/subscribe/", response_model=schemas.Follow)
 async def create_subscribe(
-    pk: int, user: User = Depends(utils.get_current_user)
-):  
+    pk: int, user: User = Depends(get_current_user)
+):
     if not user:
         return NOT_AUTHENTICATED
 
@@ -120,7 +149,7 @@ async def create_subscribe(
 
 
 @user_router.delete("/users/{pk}/subscribe/")
-async def subscribe(pk: int, user: User = Depends(utils.get_current_user)):
+async def subscribe(pk: int, user: User = Depends(get_current_user)):
     if not user:
         return NOT_AUTHENTICATED
     if await db_follow.delete(user.id, pk):

@@ -54,7 +54,11 @@ cart = Table(
 amount_ingredient = Table(
     "amount_ingredient", metadata,
     Column("id", Integer, primary_key=True),
-    Column("ingredient_id", Integer, ForeignKey("ingredient.id", ondelete='CASCADE')),
+    Column(
+        "ingredient_id",
+        Integer,
+        ForeignKey("ingredient.id", ondelete='CASCADE')
+    ),
     Column("recipe_id", Integer, ForeignKey("recipe.id", ondelete='CASCADE')),
     Column("amount", Integer),
     CheckConstraint('amount > 0', name='amount_check'),
@@ -65,12 +69,13 @@ amount_ingredient = Table(
 
 class Tag(Base):
     async def create_tag(self, tag_items):
-        print("tag_items", tag_items)
         try:
-            query = tag.insert().values(
-                name=tag_items.name,
-                color=tag_items.color,
-                slug=tag_items.slug,
+            query = (
+                tag.insert().values(
+                    name=tag_items.name,
+                    color=tag_items.color,
+                    slug=tag_items.slug,
+                )
             )
             return await self.database.execute(query)
         except UniqueViolationError as e:
@@ -95,9 +100,11 @@ class Tag(Base):
 class Ingredient(Base):
     async def create_ingredient(self, ingredient_items) -> int:
         try:
-            query = ingredient.insert().values(
-                name=ingredient_items.name,
-                measurement_unit=ingredient_items.measurement_unit,
+            query = (
+                ingredient.insert().values(
+                    name=ingredient_items.name,
+                    measurement_unit=ingredient_items.measurement_unit,
+                )
             )
             return await self.database.execute(query)
         except UniqueViolationError as e:
@@ -131,10 +138,8 @@ class Recipe(Base):
 
         try:
             recipe_id = await self.database.execute(
-                recipe.insert()
-                .values(**recipe_item)
+                recipe.insert().values(**recipe_item)
             )
-
             tags = [{"recipe_id": recipe_id, "tag_id": i} for i in tags]
             await self.database.execute(recipe_tag.insert().values(tags))
 

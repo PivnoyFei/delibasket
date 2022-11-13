@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 
 from db import database, engine, metadata
 from recipes.api import recipe_router
-from settings import STATIC_ROOT
+from settings import MEDIA_ROOT
 from users.api import user_router
 
 app = FastAPI()
@@ -11,7 +11,7 @@ app.state.database = database
 metadata.create_all(engine)
 
 
-app.mount("/static", StaticFiles(directory=STATIC_ROOT), name="static")
+app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 
 @app.on_event("startup")

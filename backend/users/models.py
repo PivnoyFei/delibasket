@@ -1,5 +1,9 @@
+from datetime import datetime, timedelta
+from uuid import UUID, uuid4
+
 from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, String,
-                        Table, UniqueConstraint, case, select)
+                        Table, UniqueConstraint, and_, case, select)
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import func
 
 from db import Base, metadata
@@ -18,7 +22,6 @@ users = Table(
     Column("is_staff", Boolean, default=False),
     Column("is_superuser", Boolean, default=False)
 )
-
 follow = Table(
     "follows", metadata,
     Column("id", Integer, primary_key=True),
@@ -26,15 +29,61 @@ follow = Table(
     Column("author_id", Integer, ForeignKey("users.id")),
     UniqueConstraint('user_id', 'author_id', name='unique_follow')
 )
+authtoken_token = Table(
+    "authtoken_token", metadata,
+    Column(
+        "key",
+        postgresql.UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+        unique=True,
+        nullable=False,
+        index=True,
+    ),
+    Column("created", DateTime),
+    Column("user_id", Integer, ForeignKey("users.id")),
+)
+
+
+class Token(Base):
+    async def create_token(self, user_id: int):
+        return await self.database.execute(
+            authtoken_token.insert()
+            .values(
+                key=uuid4().hex,
+                created=datetime.now() + timedelta(weeks=2),
+                user_id=user_id
+            )
+            .returning(authtoken_token.c.key)
+        )
+
+    async def check_token(self, token: UUID):
+        """ Возвращает информацию о владельце указанного токена. """
+        return await self.database.fetch_one(
+            authtoken_token.join(users).select().where(
+                and_(
+                    authtoken_token.c.key == token,
+                    authtoken_token.c.created > datetime.now()
+                )
+            )
+        )
+
+    async def delete_token(self, user_id: int):
+        """ Удаляет токен при выходе владельца. """
+        query = authtoken_token.delete().where(
+            authtoken_token.c.user_id == user_id)
+        await self.database.execute(query)
 
 
 class User(Base):
     async def get_users(self, pk: int | None):
-        print(pk)
         query = (
             select([
                 users,
-                case([(follow.c.user_id == pk, "True")], else_="False")
+                case(
+                    [(and_(follow.c.user_id == pk, pk != None), "True")],
+                    else_="False"
+                )
                 .label("is_subscribed")
             ])
             .join(follow, users.c.id == follow.c.author_id, full=True)
@@ -52,13 +101,14 @@ class User(Base):
         return await self.database.fetch_one(query)
 
     async def get_user_password_id_by_email(self, email: str):
-        query = select(users.c.id, users.c.password).where(
-            users.c.email == email)
-        return await self.database.fetch_one(query)
+        return await self.database.fetch_one(
+            select(users.c.id, users.c.password)
+            .where(users.c.email == email)
+        )
 
     async def get_user_full_by_id(self, pk: int):
-        query = (select([users]).where(users.c.id == pk))
-        return await self.database.fetch_one(query)
+        return await self.database.fetch_one(
+            select([users]).where(users.c.id == pk))
 
     async def get_user_full_by_id_auth(self, pk: int, user_id: int):
         query = await self.database.fetch_one(
@@ -68,8 +118,9 @@ class User(Base):
                 users.c.username,
                 users.c.first_name,
                 users.c.last_name,
-                case([(follow.c.user_id == user_id, "True")],
-                     else_="False").label("is_subscribed")
+                case([(and_(follow.c.user_id == user_id,
+                       follow.c.user_id != users.c.id),
+                       "True")], else_="False").label("is_subscribed")
             )
             .join(follow, users.c.id == follow.c.author_id, full=True)
             .where(users.c.id == pk)
@@ -77,35 +128,39 @@ class User(Base):
         return dict(query) if query else None
 
     async def create_user(self, user: UserCreate) -> int:
-        query = users.insert().values(
-            email=user.email,
-            password=user.password,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            is_active=True,
-            is_staff=False,
-            is_superuser=False
+        return await self.database.execute(
+            users.insert().values(
+                email=user.email,
+                password=user.password,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                is_active=True,
+                is_staff=False,
+                is_superuser=False
+            )
         )
-        return await self.database.execute(query)
 
-    async def update_user(
-        self, first_name: str, last_name: str, email: str, id: int
-    ):
-        query = users.update().where(users.c.id == id).values(
-            first_name=first_name, last_name=last_name, email=email)
-        await self.database.execute(query)
+    async def update_user(self, password: str, user_id: int):
+        await self.database.execute(
+            users.update()
+            .where(users.c.id == user_id)
+            .values(password=password)
+        )
 
 
 class Follow(Base):
     async def is_subscribed(self, user_id: int, author_id: int) -> int | None:
-        query = select([follow]).where(
-            follow.c.user_id == user_id, follow.c.author_id == author_id
+        return await self.database.fetch_one(
+            select([follow])
+            .where(
+                follow.c.user_id == user_id,
+                follow.c.author_id == author_id
+            )
         )
-        return await self.database.fetch_one(query)
 
     async def is_subscribed_all(self, user_id: int):
-        query = (
+        return await self.database.fetch_all(
             select(
                 users.c.id,
                 users.c.username,
@@ -117,8 +172,6 @@ class Follow(Base):
             .join_from(follow, users, users.c.id == follow.c.author_id)
             .where(follow.c.user_id == user_id, users.c.is_active == True)
         )
-        print(query)
-        return await self.database.fetch_all(query)
 
     async def create(self, user_id: int, author_id: int):
         query = follow.insert().values(

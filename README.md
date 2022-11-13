@@ -11,8 +11,8 @@
 - ```/api/users/{id}/subscribe/``` post: Подписаться на пользователя ✔️
 - ```/api/users/{id}/subscribe/``` delete: Отписаться от пользователя ✔️
 - ```/api/auth/token/login/``` post: Получить токен авторизации ✔️
-- ```/api/auth/token/logout/``` post: Удаление токена
-- ```/api/users/set_password/``` post: Изменение пароля
+- ```/api/auth/token/logout/``` post: Удаление токена ✔️
+- ```/api/users/set_password/``` post: Изменение пароля ✔️
 
 - ```/api/tags/``` get: Cписок тегов ✔️
 - ```/api/tags/``` post: Создание тега ✔️
@@ -34,7 +34,14 @@
 
 
 ### Стек: 
-```Python 3.10, fastapi 0.85.0, PostgreSQL  13.0, Docker, Nginx, GitHub Actions```
+![Python](https://img.shields.io/badge/Python-171515?style=flat-square&logo=Python)![3.11](https://img.shields.io/badge/3.11-blue?style=flat-square&logo=3.11)
+![FastAPI](https://img.shields.io/badge/FastAPI-171515?style=flat-square&logo=FastAPI)![0.85.0](https://img.shields.io/badge/0.85.0-blue?style=flat-square&logo=0.85.0)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-171515?style=flat-square&logo=PostgreSQL)![13.0](https://img.shields.io/badge/13.0-blue?style=flat-square&logo=13.0)
+![Docker](https://img.shields.io/badge/Docker-171515?style=flat-square&logo=Docker)
+![Docker-compose](https://img.shields.io/badge/Docker--compose-171515?style=flat-square&logo=Docker)
+![Nginx](https://img.shields.io/badge/Nginx-171515?style=flat-square&logo=Nginx)
+![GitHub](https://img.shields.io/badge/GitHub-171515?style=flat-square&logo=GitHub)
+![GitHub-Actions](https://img.shields.io/badge/GitHub--Actions-171515?style=flat-square&logo=GitHub-Actions)
 
 ### Запуск проекта
 Клонируем репозиторий и переходим в него:
@@ -64,11 +71,7 @@ POSTGRES_USER='postgres' # логин для подключения к БД
 POSTGRES_PASSWORD='postgres' # пароль для подключения к БД
 POSTGRES_SERVER='db' # название контейнера
 POSTGRES_PORT='5432' # порт для подключения к БД
-ALGORITHM = "HS256"
-JWT_SECRET_KEY = "key"
-JWT_REFRESH_SECRET_KEY = "key"
 ```
-#### Чтобы сгенерировать безопасный случайный секретный ключ, используйте команду ```openssl rand -hex 32```:
 
 #### Переходим в папку с файлом docker-compose.yaml:
 ```bash
@@ -85,12 +88,10 @@ docker-compose up -d --build
 docker-compose down -v
 ```
 
-#### Запуск проекта без Docker на SQLite
+#### Загрузка ингредиентов и тегов в бд после первого запускаЖ
 ```bash
-uvicorn main:app --reload
-```
-
 python load_json.py
+```
 
 #### Автор
 [Смелов Илья](https://github.com/PivnoyFei)
