@@ -2,9 +2,9 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from db import database, engine, metadata
-from recipes.api import recipe_router
+from recipes import api_recipe
 from settings import MEDIA_ROOT
-from users.api import user_router
+from users import api_auth, api_user
 
 app = FastAPI()
 app.state.database = database
@@ -28,5 +28,6 @@ async def shutdown() -> None:
         await database_.disconnect()
 
 
-app.include_router(user_router)
-app.include_router(recipe_router)
+app.include_router(api_recipe.router)
+app.include_router(api_user.router, prefix="/api")
+app.include_router(api_auth.router, prefix="/api")

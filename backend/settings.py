@@ -21,8 +21,9 @@ DATABASE_URL = (f"postgresql://{POSTGRES_USER}:"
                 f"{POSTGRES_PORT}/"
                 f"{POSTGRES_DB}")
 
-MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "media/")
-DATA_ROOT = os.path.join(os.path.dirname(__file__), "data/")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+DATA_ROOT = os.path.join(BASE_DIR, "data")
 
 NOT_AUTHENTICATED = JSONResponse(
     {"detail": "Not authenticated"}, status.HTTP_401_UNAUTHORIZED)

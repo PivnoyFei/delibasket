@@ -66,10 +66,9 @@ class SetPassword(BaseModel):
     pas_two: str = Field(..., description="Repeat password")
 
     @root_validator()
-    def validator(cls, values):
-        if (values["pas_one"] != values["pas_two"]
-                or values["pas_old"] == values["pas_one"]):
+    def validator(cls, v):
+        if v["pas_one"] != v["pas_two"] or v["pas_old"] == v["pas_one"]:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, "Incorrect password"
             )
-        return values
+        return v

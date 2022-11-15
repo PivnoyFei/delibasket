@@ -3,6 +3,8 @@ import json
 from fastapi import Form
 from pydantic import BaseModel
 
+from users.schemas import Body, UserSchemas
+
 
 class Tag(BaseModel):
     name: str = Form()
@@ -10,9 +12,26 @@ class Tag(BaseModel):
     slug: str = Form()
 
 
+class Tags(BaseModel):
+    id: int
+    name: str
+    color: str
+    slug: str
+
+
 class Ingredient(BaseModel):
     name: str = Form()
     measurement_unit: str = Form()
+
+
+class Ingredients(BaseModel):
+    id: int
+    name: str
+    measurement_unit: str
+
+
+class Amount(Ingredients):
+    amount: int
 
 
 class AmountIngredient(BaseModel):
@@ -30,9 +49,25 @@ class AmountIngredient(BaseModel):
         return value
 
 
-class Recipe(BaseModel):
+class Favorite(BaseModel):
+    id: int
     name: str
+    image: str
+    cooking_time: int
+
+
+class Recipe(BaseModel):
+    id: int
+    name: str
+    image: str
+    tags: list[Tags]
+    author: UserSchemas
+    ingredients: list[Amount]
     text: str
     cooking_time: int
-    ingredients: list[AmountIngredient] = Form(...)
-    tags: list[int] = Form(...)
+    is_favorited: bool = False
+    is_in_shopping_cart: bool = False
+
+
+class listRecipe(Body):
+    results: list[Recipe] | None = []
