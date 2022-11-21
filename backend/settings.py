@@ -12,7 +12,7 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", default="postgres")
 POSTGRES_SERVER = os.getenv("POSTGRES_SERVER", default="localhost")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", default="5432")
 
-TESTING = os.getenv("TESTING")
+TESTING = os.getenv("TESTING", default=False)
 if TESTING:
     POSTGRES_SERVER = "db-test"
 DATABASE_URL = (f"postgresql://{POSTGRES_USER}:"
@@ -21,8 +21,14 @@ DATABASE_URL = (f"postgresql://{POSTGRES_USER}:"
                 f"{POSTGRES_PORT}/"
                 f"{POSTGRES_DB}")
 
-MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "media/")
-DATA_ROOT = os.path.join(os.path.dirname(__file__), "data/")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+MEDIA_URL = 'media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_URL)
+FILES_ROOT = os.path.join(MEDIA_ROOT, "files")
+DATA_ROOT = os.path.join(BASE_DIR, "data")
+
+ALLOWED_TYPES = ("jpeg", "jpg", "png", "gif")
 
 NOT_AUTHENTICATED = JSONResponse(
     {"detail": "Not authenticated"}, status.HTTP_401_UNAUTHORIZED)

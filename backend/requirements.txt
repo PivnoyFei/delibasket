@@ -3,6 +3,7 @@ docker==6.0.0
 asyncpg==0.26.0
 databases==0.6.1
 fastapi==0.85.0
+fastapi-pagination==0.10.0
 Jinja2==3.1.2
 requests==2.28.1
 pytest==6.2.4
@@ -16,3 +17,4 @@ uvicorn==0.18.3
 bcrypt==4.0.0
 passlib==1.7.4
 python-jose==3.3.0
+Pillow==9.3.0

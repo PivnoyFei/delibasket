@@ -1,13 +1,17 @@
+import uuid
 from datetime import datetime, timedelta
-from uuid import UUID, uuid4
 
 from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, String,
                         Table, UniqueConstraint, and_, case, select)
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import func
 
 from db import Base, metadata
-from users.schemas import UserCreate
+from users.schemas import Subscriptions, UserBase, UserCreate
+
+
+def generate_uuid():
+    return str(uuid.uuid4().hex)
+
 
 users = Table(
     "users", metadata,
@@ -25,23 +29,22 @@ users = Table(
 follow = Table(
     "follows", metadata,
     Column("id", Integer, primary_key=True),
-    Column("user_id", Integer, ForeignKey("users.id")),
-    Column("author_id", Integer, ForeignKey("users.id")),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
+    Column("author_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
     UniqueConstraint('user_id', 'author_id', name='unique_follow')
 )
 authtoken_token = Table(
     "authtoken_token", metadata,
     Column(
         "key",
-        postgresql.UUID(as_uuid=True),
+        String,
         primary_key=True,
-        default=uuid4,
+        default=generate_uuid(),
         unique=True,
-        nullable=False,
         index=True,
     ),
     Column("created", DateTime),
-    Column("user_id", Integer, ForeignKey("users.id")),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
 )
 
 
@@ -50,14 +53,14 @@ class Token(Base):
         return await self.database.execute(
             authtoken_token.insert()
             .values(
-                key=uuid4().hex,
+                key=generate_uuid(),
                 created=datetime.now() + timedelta(weeks=2),
                 user_id=user_id
             )
             .returning(authtoken_token.c.key)
         )
 
-    async def check_token(self, token: UUID):
+    async def check_token(self, token):
         """ Возвращает информацию о владельце указанного токена. """
         return await self.database.fetch_one(
             authtoken_token.join(users).select().where(
@@ -76,7 +79,7 @@ class Token(Base):
 
 
 class User(Base):
-    async def get_users(self, pk: int | None):
+    async def get_users(self, pk: int | None) -> list[UserBase]:
         query = (
             select([
                 users,
@@ -150,7 +153,7 @@ class User(Base):
 
 
 class Follow(Base):
-    async def is_subscribed(self, user_id: int, author_id: int) -> int | None:
+    async def is_subscribed(self, user_id: int, author_id: int):
         return await self.database.fetch_one(
             select([follow])
             .where(
@@ -159,8 +162,21 @@ class Follow(Base):
             )
         )
 
-    async def is_subscribed_all(self, user_id: int):
-        return await self.database.fetch_all(
+    async def count_is_subscribed(self, user_id: int) -> int:
+        query = await self.database.fetch_one(
+            select(func.count(users.c.id).label("is_count"))
+            .join_from(follow, users, users.c.id == follow.c.author_id)
+            .where(follow.c.user_id == user_id, users.c.is_active == True)
+        )
+        return query[0] if query else 0
+
+    async def is_subscribed_all(
+        self,
+        user_id: int,
+        page: int = None,
+        limit: int = None
+    ) -> list[Subscriptions]:
+        query = (
             select(
                 users.c.id,
                 users.c.username,
@@ -172,13 +188,18 @@ class Follow(Base):
             .join_from(follow, users, users.c.id == follow.c.author_id)
             .where(follow.c.user_id == user_id, users.c.is_active == True)
         )
+        if limit:
+            query = query.limit(limit)
+            if page:
+                query = query.offset((page - 1) * limit)
+        return await self.database.fetch_all(query)
 
-    async def create(self, user_id: int, author_id: int):
+    async def create(self, user_id: int, author_id: int) -> int:
         query = follow.insert().values(
             user_id=user_id, author_id=author_id)
         await self.database.execute(query)
 
-    async def delete(self, user_id: int, author_id: int):
+    async def delete(self, user_id: int, author_id: int) -> None:
         query = follow.delete().where(
             follow.c.user_id == user_id, follow.c.author_id == author_id)
         await self.database.execute(query)

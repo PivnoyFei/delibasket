@@ -1,10 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from db import database, engine, metadata
-from recipes.api import recipe_router
+from recipes import api_recipe
 from settings import MEDIA_ROOT
-from users.api import user_router
+from users import api_auth, api_user
 
 app = FastAPI()
 app.state.database = database
@@ -28,5 +30,20 @@ async def shutdown() -> None:
         await database_.disconnect()
 
 
-app.include_router(user_router)
-app.include_router(recipe_router)
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    message = ""
+    for pydantic_error in exc.errors():
+        loc, msg = pydantic_error["loc"], pydantic_error["msg"]
+        filtered_loc = loc[1:] if loc[0] in ("body", "query", "path") else loc
+        field_string = ".".join(filtered_loc)
+        message += f"\n{field_string} - {msg}"
+    return JSONResponse(
+        {"detail": "Invalid request", "errors": message},
+        status.HTTP_422_UNPROCESSABLE_ENTITY
+    )
+
+
+app.include_router(api_recipe.router)
+app.include_router(api_user.router, prefix="/api")
+app.include_router(api_auth.router, prefix="/api")

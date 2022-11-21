@@ -43,8 +43,8 @@ class UserBase(BaseModel):
 
 class Body(BaseModel):
     count: int
-    next: bool = None
-    previous: bool = None
+    next: str | None = None
+    previous: str | None = None
 
 
 class ListUsers(Body):
@@ -61,15 +61,14 @@ class Subscriptions(Body):
 
 
 class SetPassword(BaseModel):
-    pas_old: str = Field(..., description="old password")
-    pas_one: str = Field(..., description="New Password")
-    pas_two: str = Field(..., description="Repeat password")
+    current_password: str = Field(..., description="old password")
+    new_password: str = Field(..., description="New Password")
 
     @root_validator()
-    def validator(cls, values):
-        if (values["pas_one"] != values["pas_two"]
-                or values["pas_old"] == values["pas_one"]):
+    def validator(cls, value):
+        print(value)
+        if value["current_password"] == value["new_password"]:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, "Incorrect password"
             )
-        return values
+        return value
