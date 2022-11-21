@@ -11,16 +11,17 @@ from users.models import Follow, User
 from users.utils import get_current_user, get_hashed_password, verify_password
 
 router = APIRouter(prefix='/users', tags=["users"])
+PROTECTED = Depends(get_current_user)
 db_recipe = Recipe(database)
 db_user = User(database)
 db_follow = Follow(database)
 
 
 @router.get("/", response_model=schemas.ListUsers)
-async def users(user: User = Depends(get_current_user)):
+async def users(user: User = PROTECTED):
     """Список пользователей."""
     user = await db_user.get_users(user.id if user else None)
-    return await query_list(user)
+    return await query_list(user, count=len(user))
 
 
 @router.post("/", response_model=schemas.UserRegistration)
@@ -41,7 +42,7 @@ async def create_user(user: schemas.UserCreate):
 
 
 @router.get("/me/", response_model=schemas.UserSchemas)
-async def me(user: User = Depends(get_current_user)):
+async def me(user: User = PROTECTED):
     """Текущий пользователь."""
     return {
         "id": user.id,
@@ -54,7 +55,11 @@ async def me(user: User = Depends(get_current_user)):
 
 @router.get("/subscriptions/", response_model=schemas.Subscriptions)
 async def subscriptions(
-    request: Request, user: User = Depends(get_current_user)
+    request: Request,
+    page: int = None,
+    limit: int = None,
+    recipes_limit: int = None,
+    user: User = PROTECTED
 ):
     """
     Мои подписки.
@@ -63,32 +68,33 @@ async def subscriptions(
     """
     if not user:
         return NOT_AUTHENTICATED
-    results = await db_follow.is_subscribed_all(user.id)
+    results = await db_follow.is_subscribed_all(user.id, page, limit)
     if results:
         results = [dict(i) for i in results]
         for user_dict in results:
             recipes = await db_recipe.check_recipe_by_id_author(
-                request, author_id=user_dict["id"])
+                request, author_id=user_dict["id"], limit=recipes_limit)
             user_dict["recipes"] = recipes
             user_dict["recipes_count"] = len(recipes)
-        return await query_list(results)
+        count = await db_follow.count_is_subscribed(user.id)
+        return await query_list(results, request, count, page, limit)
     return Response(status_code=status.HTTP_401_UNAUTHORIZED)
 
 
 @router.post("/set_password/")
-async def set_password(
-    user_pas: schemas.SetPassword, user: User = Depends(get_current_user)
-):
+async def set_password(user_pas: schemas.SetPassword, user: User = PROTECTED):
     if not user:
         return NOT_AUTHENTICATED
-    if not await verify_password(user_pas.pas_old, user.password):
-        return JSONResponse("Incorrect password", status.HTTP_400_BAD_REQUEST)
-    password_hashed = await get_hashed_password(user_pas.pas_two)
+    if not await verify_password(user_pas.current_password, user.password):
+        return JSONResponse(
+            {"detail": "Incorrect password"}, status.HTTP_400_BAD_REQUEST
+        )
+    password_hashed = await get_hashed_password(user_pas.new_password)
     return await db_user.update_user(password_hashed, user.id)
 
 
 @router.get("/{pk}/", response_model=schemas.UserSchemas)
-async def user_id(pk: int, user: User = Depends(get_current_user)):
+async def user_id(pk: int, user: User = PROTECTED):
     """Профиль пользователя. Доступно всем пользователям."""
     if user:
         user = await db_user.get_user_full_by_id_auth(pk, user.id)
@@ -98,9 +104,7 @@ async def user_id(pk: int, user: User = Depends(get_current_user)):
 
 
 @router.post("/{pk}/subscribe/", response_model=schemas.Follow)
-async def create_subscribe(
-    request: Request, pk: int, user: User = Depends(get_current_user)
-):
+async def create_subscribe(request: Request, pk: int, user: User = PROTECTED):
     if not user:
         return NOT_AUTHENTICATED
 
@@ -127,7 +131,7 @@ async def create_subscribe(
 
 
 @router.delete("/{pk}/subscribe/")
-async def subscribe(pk: int, user: User = Depends(get_current_user)):
+async def subscribe(pk: int, user: User = PROTECTED):
     if not user:
         return NOT_AUTHENTICATED
     if await db_follow.delete(user.id, pk):

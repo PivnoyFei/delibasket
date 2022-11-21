@@ -20,7 +20,7 @@
 - ```/api/recipes/{id}/``` - get | delete - Получение рецепта ✔️
 - ```/api/recipes/{id}/favorite/``` - post | delete - Добавить рецепт в избранное ✔️
 - ```/api/recipes/{id}/shopping_cart/``` - post | delete -  Добавить рецепт в список покупок ✔️
-- ```/api/recipes/download_shopping_cart/``` - get - Скачать список покупок
+- ```/api/recipes/download_shopping_cart/``` - get - Скачать список покупок ✔️
 - ```/api/ingredients/``` - get | post - Список ингредиентов ✔️
 - ```/api/ingredients/{id}/``` - get | delete - Получение ингредиента ✔️
 
@@ -86,7 +86,7 @@ docker-compose down -v
 
 #### Загрузка ингредиентов и тегов в бд после запуска контейнера:
 ```bash
-python load_json.py
+docker-compose exec backend python load_json.py
 ```
 
 #### Автор

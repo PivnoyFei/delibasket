@@ -2,10 +2,9 @@ from fastapi import Depends, HTTPException, status
 from passlib.context import CryptContext
 
 from db import database
-from users.models import Token, User
+from users.models import Token
 from users.user_deps import OAuth2PasswordToken
 
-db_user = User(database)
 db_token = Token(database)
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordToken(

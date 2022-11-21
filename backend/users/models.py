@@ -10,7 +10,7 @@ from users.schemas import Subscriptions, UserBase, UserCreate
 
 
 def generate_uuid():
-    return str(uuid.uuid4())
+    return str(uuid.uuid4().hex)
 
 
 users = Table(
@@ -162,8 +162,21 @@ class Follow(Base):
             )
         )
 
-    async def is_subscribed_all(self, user_id: int) -> list[Subscriptions]:
-        return await self.database.fetch_all(
+    async def count_is_subscribed(self, user_id: int) -> int:
+        query = await self.database.fetch_one(
+            select(func.count(users.c.id).label("is_count"))
+            .join_from(follow, users, users.c.id == follow.c.author_id)
+            .where(follow.c.user_id == user_id, users.c.is_active == True)
+        )
+        return query[0] if query else 0
+
+    async def is_subscribed_all(
+        self,
+        user_id: int,
+        page: int = None,
+        limit: int = None
+    ) -> list[Subscriptions]:
+        query = (
             select(
                 users.c.id,
                 users.c.username,
@@ -175,6 +188,11 @@ class Follow(Base):
             .join_from(follow, users, users.c.id == follow.c.author_id)
             .where(follow.c.user_id == user_id, users.c.is_active == True)
         )
+        if limit:
+            query = query.limit(limit)
+            if page:
+                query = query.offset((page - 1) * limit)
+        return await self.database.fetch_all(query)
 
     async def create(self, user_id: int, author_id: int) -> int:
         query = follow.insert().values(

@@ -35,8 +35,8 @@ class Amount(Ingredients):
 
 
 class AmountIngredient(BaseModel):
-    ingredient_id: int = 0
-    amount: int = 0
+    id: int = 0
+    amount: int | str = 0
 
     @classmethod
     def __get_validators__(cls):
@@ -54,6 +54,15 @@ class Favorite(BaseModel):
     name: str
     image: str
     cooking_time: int
+
+
+class LoadRecipe(BaseModel):
+    text: str = Form(...)
+    name: str = Form(...)
+    image: str = Form(...)
+    cooking_time: int = Form(...)
+    ingredients: list[AmountIngredient] = Form(...)
+    tags: list[int] = Form(...)
 
 
 class Recipe(BaseModel):
