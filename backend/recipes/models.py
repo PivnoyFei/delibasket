@@ -6,7 +6,8 @@ from sqlalchemy.sql import func
 from starlette.requests import Request
 
 from db import Base, metadata
-from recipes import schemas
+from recipes.schemas import (SAmount, SAmountIngredient, SFavorite,
+                             SIngredient, SIngredients, SRecipe, STag, STags)
 from settings import MEDIA_URL
 from users.models import User
 
@@ -72,22 +73,22 @@ amount_ingredient = Table(
 
 
 class Tag(Base):
-    async def create_tag(self, tag_items) -> int:
+    async def create_tag(self, items: STag, pk=None) -> int:
         try:
             query = (
                 tag.insert().values(
-                    name=tag_items.name,
-                    color=tag_items.color,
-                    slug=tag_items.slug,
+                    name=items.name,
+                    color=items.color,
+                    slug=items.slug,
                 )
-            )
+            ).returning([tag])
             return await self.database.execute(query)
         except UniqueViolationError as e:
             return e
 
     async def get_tags(
         self, pk: int = None, name: str = None
-    ) -> schemas.Tags | list[schemas.Tags] | None:
+    ) -> STags | list[STags] | None:
 
         query = select([tag])
         if pk:
@@ -98,7 +99,7 @@ class Tag(Base):
                 query = query.where(tag.c.name.like(f"{name}%"))
         return await self.database.fetch_all(query)
 
-    async def get_tags_by_recipe_id(self, pk: int) -> list[schemas.Tags]:
+    async def get_tags_by_recipe_id(self, pk: int) -> list[STags]:
         tags_dict = (
             select([tag])
             .join(recipe_tag, recipe_tag.c.tag_id == tag.c.id)
@@ -107,29 +108,36 @@ class Tag(Base):
         )
         return await self.database.fetch_all(tags_dict)
 
-    async def delete_tag(self, pk: int) -> bool:
+    async def update_tag(self, items: STag, pk: str) -> None:
+        await self.database.execute(
+            tag.update()
+            .where(tag.c.id == pk)
+            .values(items)
+            .returning([tag])
+        )
+
+    async def delete_tag(self, pk: int) -> None:
         await self.database.execute(
             tag.delete().where(tag.c.id == pk)
         )
 
 
 class Ingredient(Base):
-    async def create_ingredient(self, ingredient_items) -> int:
+    async def create_ingredient(self, items: SIngredient) -> int:
         try:
             query = (
                 ingredient.insert().values(
-                    name=ingredient_items.name,
-                    measurement_unit=ingredient_items.measurement_unit,
+                    name=items.name,
+                    measurement_unit=items.measurement_unit,
                 )
-            )
+            ).returning([ingredient])
             return await self.database.execute(query)
         except UniqueViolationError as e:
             return e
 
     async def get_ingredient(
         self, pk: int = None, name: str = None
-    ) -> schemas.Ingredients | list[schemas.Ingredients] | None:
-
+    ) -> SIngredients | list[SIngredients] | None:
         query = select([ingredient])
         if pk:
             query = query.where(ingredient.c.id == pk)
@@ -139,6 +147,14 @@ class Ingredient(Base):
                 query = query.where(ingredient.c.name.like(f"{name}%"))
         return await self.database.fetch_all(query)
 
+    async def update_ingredient(self, items: SIngredient, pk: int) -> None:
+        return await self.database.execute(
+            ingredient.update()
+            .where(ingredient.c.id == pk)
+            .values(items)
+            .returning([ingredient])
+        )
+
     async def delete_ingredient(self, pk: int) -> bool:
         await self.database.execute(
             ingredient.delete().where(ingredient.c.id == pk)
@@ -146,7 +162,7 @@ class Ingredient(Base):
 
 
 class Amount(Base):
-    async def get_amount_by_recipe_id(self, pk: int) -> list[schemas.Amount]:
+    async def get_amount_by_recipe_id(self, pk: int) -> list[SAmount]:
         amount_dict = (
             select([ingredient, amount_ingredient.c.amount])
             .join(
@@ -162,7 +178,7 @@ class Recipe(Base):
     async def create_recipe(
         self,
         recipe_item: dict,
-        ingredients: list[schemas.AmountIngredient],
+        ingredients: list[SAmountIngredient],
         tags: list[int | str]
     ) -> int:
 
@@ -181,7 +197,6 @@ class Recipe(Base):
                 }
                 for i in ingredients
             ]
-            print("ingredients", ingredients)
             await self.database.execute(
                 amount_ingredient.insert().values(ingredients)
             )
@@ -190,13 +205,18 @@ class Recipe(Base):
         except UniqueViolationError as e:
             return e
 
+    async def check_recipe_by_id(self, pk: int):
+        return await self.database.fetch_one(
+            select(recipe.c.author_id).where(recipe.c.id == pk)
+        )
+
     async def check_recipe_by_id_author(
         self,
         request: Request,
         recipe_id: int = None,
         author_id: int = None,
         limit: int = None,
-    ) -> list[schemas.Favorite] | None:
+    ) -> list[SFavorite] | None:
 
         query = select(
                 recipe.c.id,
@@ -260,7 +280,7 @@ class Recipe(Base):
         is_in_cart: bool = True,
         user_id: int = None,
         request: Request = None
-    ) -> list[schemas.Recipe] | None:
+    ) -> list[SRecipe] | None:
 
         query = (
             select(

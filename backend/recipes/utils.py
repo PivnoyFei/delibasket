@@ -21,11 +21,12 @@ class QueryParams:
     tags: list[int | str] = Query(None)
 
 
-async def create_tag_ingredient(db_model, item, user):
+async def utils_tag_ingredient(db_model, item, user, pk=None):
+    """ Распределяет модели создания и редактирования тегов и ингредиентов. """
     if not user:
         return NOT_AUTHENTICATED
-    if user.is_superuser or user.is_staff is True:
-        e = await db_model(item)
+    if user.is_staff:
+        e = await db_model(item, pk)
         if type(e) != int:
             e = str(e).split(": ")[-1]
             return JSONResponse(f"Incorrect {e}", status.HTTP_400_BAD_REQUEST)

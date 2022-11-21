@@ -51,13 +51,13 @@ class ListUsers(Body):
     results: list[UserSchemas] = []
 
 
-class Follow(UserBase):
+class SFollow(UserBase):
     recipes: Optional[list] = []
     recipes_count: Optional[int] = 0
 
 
 class Subscriptions(Body):
-    results: list[Follow] = []
+    results: list[SFollow] = []
 
 
 class SetPassword(BaseModel):
@@ -72,3 +72,7 @@ class SetPassword(BaseModel):
                 status.HTTP_400_BAD_REQUEST, "Incorrect password"
             )
         return value
+
+
+class IsActive(BaseModel):
+    is_active: bool
