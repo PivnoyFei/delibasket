@@ -90,6 +90,11 @@ docker-compose up -d --build
 docker-compose down -v
 ```
 
+#### Создание суперпользователя:
+```bash
+docker-compose exec backend python createsuperuser.py
+```
+
 #### Загрузка ингредиентов и тегов в бд после запуска контейнера:
 ```bash
 docker-compose exec backend python load_json.py

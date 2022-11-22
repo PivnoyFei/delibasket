@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import HTTPException, status
 from pydantic import BaseModel, EmailStr, Field, root_validator
 
@@ -51,9 +49,16 @@ class ListUsers(Body):
     results: list[UserSchemas] = []
 
 
+class SFavorite(BaseModel):
+    id: int
+    name: str
+    image: str
+    cooking_time: int
+
+
 class SFollow(UserBase):
-    recipes: Optional[list] = []
-    recipes_count: Optional[int] = 0
+    recipes: list[SFavorite] = []
+    recipes_count: int = 0
 
 
 class Subscriptions(Body):

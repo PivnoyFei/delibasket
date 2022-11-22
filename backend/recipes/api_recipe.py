@@ -11,10 +11,11 @@ from db import database
 from recipes.models import (FavoriteCart, Ingredient, Recipe, Tag, cart,
                             favorites)
 from recipes.schemas import (SFavorite, SIngredient, SIngredients, SlistRecipe,
-                             SLoadRecipe, SRecipe, STag, STags)
-from recipes.utils import (QueryParams, base64_image, create_cart_favorite,
+                             SLoadRecipe, SPatchRecipe, SRecipe, STag, STags)
+from recipes.utils import (QueryParams, base64_image, check_ingredient,
+                           check_tags, create_cart_favorite,
                            delete_cart_favorite, utils_tag_ingredient)
-from services import query_list
+from services import image_delete, query_list
 from settings import FILES_ROOT, NOT_AUTHENTICATED, NOT_FOUND
 from users.models import User
 from users.utils import get_current_user
@@ -72,7 +73,7 @@ async def tags_ingredients(
         db_model_get = db_ingredient.get_ingredient
 
     if request.method == "DELETE":
-        if user.is_staff:
+        if user.is_staff or user.is_superuser:
             return await db_model_delete(pk)
         return Response(status_code=status.HTTP_403_FORBIDDEN)
     return await db_model_get(pk, name) or NOT_FOUND
@@ -84,17 +85,8 @@ async def create_recipe(
 ):
     if not user:
         return NOT_AUTHENTICATED
-    for i in recipe.tags:
-        if not await db_tag.get_tags(i):
-            return JSONResponse(
-                {"detail": f"Not tag {i}"}, status.HTTP_404_NOT_FOUND
-            )
-    for i in recipe.ingredients:
-        i = i["id"]
-        if not await db_ingredient.get_ingredient(i):
-            return JSONResponse(
-                {"detail": f"Not ingredient {i}"}, status.HTTP_404_NOT_FOUND
-            )
+    await check_tags(recipe.tags)
+    await check_ingredient(recipe.ingredients)
     filename, image_path = await base64_image(recipe.image)
     try:
         recipe_item = {
@@ -110,10 +102,9 @@ async def create_recipe(
         r = await db_recipe.get_recipe(pk, user_id=user.id, request=request)
         return r[0]
     except (Exception, UniqueViolationError):
-        if os.path.isfile(image_path):
-            os.remove(image_path)
+        await image_delete(image_path=image_path)
         return JSONResponse(
-            {"detail": "Error image"}, status.HTTP_400_BAD_REQUEST)
+            {"detail": "Error recipe"}, status.HTTP_400_BAD_REQUEST)
 
 
 @router.get("/recipes/download_shopping_cart/")
@@ -164,6 +155,7 @@ async def recipes(
     pk: int = None,
     page: int = None,
     limit: int = None,
+    author: int = None,
     is_favorited: int = None,
     is_in_shopping_cart: int = None,
     user: User = PROTECTED,
@@ -177,8 +169,8 @@ async def recipes(
     if request.method == "DELETE":
         if not user_id:
             return NOT_AUTHENTICATED
-        author_id = await db_recipe.check_recipe_by_id(pk)
-        if author_id.author_id == user.id or user.is_staff:
+        recipe = await db_recipe.check_recipe_by_id(pk)
+        if recipe.author_id == user.id or user.is_staff or user.is_superuser:
             await db_recipe.delete_recipe(pk)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -192,12 +184,51 @@ async def recipes(
 
     recipe_dict = await db_recipe.get_recipe(
         pk=pk, tags=tags, page=page, limit=limit, is_favorited=is_favorited,
-        user_id=user_id, is_in_cart=is_in_cart, request=request
+        user_id=user_id, author=author, is_in_cart=is_in_cart, request=request
     )
     if recipe_dict:
-        count = await db_recipe.count_recipe(tags, is_favorited, is_in_cart)
+        count = await db_recipe.count_recipe(
+            author, tags, is_favorited, is_in_cart
+        )
         return await query_list(recipe_dict, request, count, page, limit)
     return await query_list(recipe_dict, request, 0, page, limit)
+
+
+@router.patch("/recipes/{pk}/", response_model=SRecipe)
+async def update_recipe(
+    request: Request, pk: int, recipe: SPatchRecipe, user: User = PROTECTED
+):
+    if not user:
+        return NOT_AUTHENTICATED
+    author = await db_recipe.check_recipe_image_by_id(pk)
+    if author.author_id == user.id or user.is_staff or user.is_superuser:
+        await check_tags(recipe.tags)
+        await check_ingredient(recipe.ingredients)
+        if recipe.image:
+            filename, image_path = await base64_image(recipe.image)
+            await image_delete(filename=author.image)
+        else:
+            filename, image_path = author.image, ""
+        try:
+            recipe_item = {
+                "author_id": author.author_id,
+                "name": recipe.name,
+                "text": recipe.text,
+                "image": filename
+            }
+            pk = await db_recipe.update_recipe(
+                pk, recipe_item, recipe.ingredients, recipe.tags
+            )
+            result = await db_recipe.get_recipe(
+                pk, user_id=user.id, request=request)
+            return result[0]
+
+        except UniqueViolationError as e:
+            await image_delete(filename, image_path)
+            return JSONResponse(
+                {"detail": e}, status.HTTP_400_BAD_REQUEST)
+
+    return Response(status_code=status.HTTP_403_FORBIDDEN)
 
 
 @router.post("/recipes/{pk}/favorite/", response_model=SFavorite)

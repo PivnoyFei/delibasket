@@ -175,31 +175,37 @@ class Amount(Base):
 
 
 class Recipe(Base):
+    async def _create_recipe_tag(self, recipe_id, tags):
+        print(recipe_id, tags)
+        tags = [{"recipe_id": recipe_id, "tag_id": i} for i in tags]
+        await self.database.execute(recipe_tag.insert().values(tags))
+
+    async def _create_amount_ingredient(self, recipe_id, ingredients):
+        result = [
+            {
+                "recipe_id": recipe_id,
+                "ingredient_id": i["id"],
+                "amount": int(i["amount"])
+            }
+            for i in ingredients
+        ]
+        await self.database.execute(amount_ingredient.insert().values(result))
+
     async def create_recipe(
         self,
         recipe_item: dict,
         ingredients: list[SAmountIngredient],
-        tags: list[int | str]
+        tags: list[int]
     ) -> int:
 
         try:
             recipe_id = await self.database.execute(
-                recipe.insert().values(**recipe_item).returning(recipe.c.id)
+                recipe.insert()
+                .values(**recipe_item)
+                .returning(recipe.c.id)
             )
-            tags = [{"recipe_id": recipe_id, "tag_id": i} for i in tags]
-            await self.database.execute(recipe_tag.insert().values(tags))
-
-            ingredients = [
-                {
-                    "recipe_id": recipe_id,
-                    "ingredient_id": i["id"],
-                    "amount": int(i["amount"])
-                }
-                for i in ingredients
-            ]
-            await self.database.execute(
-                amount_ingredient.insert().values(ingredients)
-            )
+            await self._create_recipe_tag(recipe_id, tags)
+            await self._create_amount_ingredient(recipe_id, ingredients)
             return recipe_id
 
         except UniqueViolationError as e:
@@ -208,6 +214,11 @@ class Recipe(Base):
     async def check_recipe_by_id(self, pk: int):
         return await self.database.fetch_one(
             select(recipe.c.author_id).where(recipe.c.id == pk)
+        )
+
+    async def check_recipe_image_by_id(self, pk: int):
+        return await self.database.fetch_one(
+            select(recipe.c.author_id, recipe.c.image).where(recipe.c.id == pk)
         )
 
     async def check_recipe_by_id_author(
@@ -237,15 +248,17 @@ class Recipe(Base):
 
         query = await self.database.fetch_all(query)
 
-        path_image = f"{request.base_url}{MEDIA_URL}"
         if query:
+            path_image = f"{request.base_url}{MEDIA_URL}"
             query = [dict(i) for i in query]
             for r in query:
                 r["image"] = path_image + r["image"]
         return query[0] if recipe_id else query
 
     async def count_recipe(
-        self, tags: list[int] = None,
+        self,
+        author: int = None,
+        tags: list[int] = None,
         is_favorited: bool = True,
         is_in_cart: bool = True
     ) -> int:
@@ -258,6 +271,8 @@ class Recipe(Base):
             )
             .join(cart, cart.c.recipe_id == recipe.c.id, full=is_in_cart)
         )
+        if author:
+            query = query.where(recipe.c.author_id == author)
         if tags.tags:
             query = (
                 query
@@ -276,6 +291,7 @@ class Recipe(Base):
         tags: list[int] = None,
         page: int = None,
         limit: int = None,
+        author: int = None,
         is_favorited: bool = True,
         is_in_cart: bool = True,
         user_id: int = None,
@@ -295,15 +311,13 @@ class Recipe(Base):
                         user_id != None,
                         favorites.c.user_id == user_id
                     ), "True")], else_="False"
-                )
-                .label("is_favorited"),
+                ).label("is_favorited"),
                 case(
                     [(and_(
                         user_id != None,
                         cart.c.user_id == user_id
                     ), "True")], else_="False"
-                )
-                .label("is_in_shopping_cart")
+                ).label("is_in_shopping_cart")
             )
             .join(
                 favorites,
@@ -316,6 +330,8 @@ class Recipe(Base):
         if pk:
             query = query.where(recipe.c.id == pk)
         else:
+            if author:
+                query = query.where(recipe.c.author_id == author)
             if tags.tags:
                 query = (
                     query
@@ -345,6 +361,32 @@ class Recipe(Base):
             r["author"] = await User.get_user_full_by_id_auth(
                 self, r["author"], user_id)
         return query
+
+    async def update_recipe(
+        self,
+        pk: int,
+        recipe_item: dict,
+        ingredients: list[SAmountIngredient],
+        tags: list[int]
+    ) -> int:
+        recipe_id = await self.database.execute(
+            recipe.update()
+            .values(recipe_item)
+            .where(recipe.c.id == pk)
+            .returning(recipe.c.id)
+        )
+        await self.database.execute(
+            recipe_tag.delete()
+            .where(recipe_tag.c.recipe_id == pk)
+        )
+        await self._create_recipe_tag(recipe_id, tags)
+
+        await self.database.execute(
+            amount_ingredient.delete()
+            .where(amount_ingredient.c.recipe_id == pk)
+        )
+        await self._create_amount_ingredient(recipe_id, ingredients)
+        return recipe_id
 
     async def delete_recipe(self, pk: int):
         await self.database.execute(

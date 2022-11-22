@@ -65,6 +65,15 @@ class SLoadRecipe(BaseModel):
     tags: list[int] = Form(...)
 
 
+class SPatchRecipe(BaseModel):
+    text: str = Form(...)
+    name: str = Form(...)
+    image: str | None
+    cooking_time: int = Form(...)
+    ingredients: list[SAmountIngredient] = Form(...)
+    tags: list[int] = Form(...)
+
+
 class SRecipe(BaseModel):
     id: int
     name: str

@@ -78,7 +78,7 @@ async def subscriptions(
             user_dict["recipes_count"] = len(recipes)
         count = await db_follow.count_is_subscribed(user.id)
         return await query_list(results, request, count, page, limit)
-    return Response(status_code=status.HTTP_401_UNAUTHORIZED)
+    return NOT_FOUND
 
 
 @router.post("/set_password/")
