@@ -7,13 +7,17 @@ import aiofiles
 from fastapi import Query, status
 from fastapi.responses import JSONResponse, Response
 from pydantic.dataclasses import dataclass
+from starlette.exceptions import HTTPException
 
 from db import database
-from recipes.models import FavoriteCart, Recipe
-from settings import ALLOWED_TYPES, MEDIA_ROOT, NOT_AUTHENTICATED, NOT_FOUND
+from recipes.models import FavoriteCart, Ingredient, Recipe, Tag
+from settings import (ALLOWED_TYPES, INVALID_FILE, INVALID_TYPE, MEDIA_ROOT,
+                      NOT_AUTHENTICATED, NOT_FOUND)
 
-db_favorite_cart = FavoriteCart(database)
+db_tag = Tag(database)
 db_recipe = Recipe(database)
+db_ingredient = Ingredient(database)
+db_favorite_cart = FavoriteCart(database)
 
 
 @dataclass
@@ -21,11 +25,31 @@ class QueryParams:
     tags: list[int | str] = Query(None)
 
 
-async def create_tag_ingredient(db_model, item, user):
+async def check_tags(tags):
+    for i in tags:
+        if not await db_tag.get_tags(i):
+            raise JSONResponse(
+                {"detail": f"Not tag {i}"}, status.HTTP_404_NOT_FOUND
+            )
+    return True
+
+
+async def check_ingredient(ingredients):
+    for i in ingredients:
+        i = i["id"]
+        if not await db_ingredient.get_ingredient(i):
+            raise JSONResponse(
+                {"detail": f"Not ingredient {i}"}, status.HTTP_404_NOT_FOUND
+            )
+    return True
+
+
+async def utils_tag_ingredient(db_model, item, user, pk=None):
+    """ Распределяет модели создания и редактирования тегов и ингредиентов. """
     if not user:
         return NOT_AUTHENTICATED
-    if user.is_superuser or user.is_staff is True:
-        e = await db_model(item)
+    if user.is_staff or user.is_superuser:
+        e = await db_model(item, pk)
         if type(e) != int:
             e = str(e).split(": ")[-1]
             return JSONResponse(f"Incorrect {e}", status.HTTP_400_BAD_REQUEST)
@@ -56,12 +80,8 @@ async def base64_image(base64_data, extension="jpg") -> tuple[str, str]:
     if ";base64," in base64_data:
         header, base64_data = base64_data.split(";base64,")
         name, extension = header.split("/")
-
         if extension.lower() not in ALLOWED_TYPES:
-            raise JSONResponse(
-                {"detail": "Invalid image format"},
-                status.HTTP_400_BAD_REQUEST
-            )
+            raise HTTPException(status.HTTP_418_IM_A_TEAPOT, INVALID_TYPE)
 
     filename = f"{uuid4()}.{extension}"
     image_path = os.path.join(MEDIA_ROOT, filename)
@@ -72,9 +92,8 @@ async def base64_image(base64_data, extension="jpg") -> tuple[str, str]:
     try:
         async with aiofiles.open(image_path, "wb") as buffer:
             await buffer.write(base64.b64decode(base64_data))
+
     except (Exception, TypeError, binascii.Error, ValueError):
-        raise JSONResponse(
-            {"detail": "Error encoding file"},
-            status.HTTP_422_UNPROCESSABLE_ENTITY
-        )
+        raise HTTPException(status.HTTP_418_IM_A_TEAPOT, INVALID_FILE)
+
     return filename, image_path

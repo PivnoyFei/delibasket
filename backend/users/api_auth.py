@@ -4,8 +4,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from db import database
 from settings import NOT_AUTHENTICATED
-from users import schemas
 from users.models import Token, User
+from users.schemas import TokenBase, UserAuth
 from users.utils import get_current_user, verify_password
 
 router = APIRouter(prefix='/auth', tags=["auth"])
@@ -14,8 +14,8 @@ db_user = User(database)
 db_token = Token(database)
 
 
-@router.post("/token/login/", response_model=schemas.TokenBase)
-async def login(user: schemas.UserAuth):
+@router.post("/token/login/", response_model=TokenBase)
+async def login(user: UserAuth):
     """ Авторизация по емейлу и паролю, выдает токен. """
     user = OAuth2PasswordRequestForm(
         username=user.email, password=user.password, scope="me"

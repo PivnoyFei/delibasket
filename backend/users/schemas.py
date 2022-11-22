@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import HTTPException, status
 from pydantic import BaseModel, EmailStr, Field, root_validator
 
@@ -51,13 +49,20 @@ class ListUsers(Body):
     results: list[UserSchemas] = []
 
 
-class Follow(UserBase):
-    recipes: Optional[list] = []
-    recipes_count: Optional[int] = 0
+class SFavorite(BaseModel):
+    id: int
+    name: str
+    image: str
+    cooking_time: int
+
+
+class SFollow(UserBase):
+    recipes: list[SFavorite] = []
+    recipes_count: int = 0
 
 
 class Subscriptions(Body):
-    results: list[Follow] = []
+    results: list[SFollow] = []
 
 
 class SetPassword(BaseModel):
@@ -72,3 +77,7 @@ class SetPassword(BaseModel):
                 status.HTTP_400_BAD_REQUEST, "Incorrect password"
             )
         return value
+
+
+class IsActive(BaseModel):
+    is_active: bool

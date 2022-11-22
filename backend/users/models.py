@@ -130,7 +130,7 @@ class User(Base):
         )
         return dict(query) if query else None
 
-    async def create_user(self, user: UserCreate) -> int:
+    async def create(self, user: UserCreate, is_staff: bool = False) -> int:
         return await self.database.execute(
             users.insert().values(
                 email=user.email,
@@ -139,10 +139,18 @@ class User(Base):
                 first_name=user.first_name,
                 last_name=user.last_name,
                 is_active=True,
-                is_staff=False,
+                is_staff=is_staff,
                 is_superuser=False
             )
         )
+
+    async def user_active(self, pk: str, is_active: bool):
+        query = users.update().values(is_active=is_active)
+        if pk.isdigit():
+            query = query.where(users.c.id == int(pk))
+        else:
+            query = query.where(users.c.name == pk)
+        await self.database.execute(query)
 
     async def update_user(self, password: str, user_id: int):
         await self.database.execute(
@@ -150,6 +158,14 @@ class User(Base):
             .where(users.c.id == user_id)
             .values(password=password)
         )
+
+    async def delete(self, pk: str):
+        query = users.delete()
+        if pk.isdigit():
+            query = query.where(users.c.id == int(pk))
+        else:
+            query = query.where(users.c.name == pk)
+        await self.database.execute(query)
 
 
 class Follow(Base):
@@ -200,6 +216,7 @@ class Follow(Base):
         await self.database.execute(query)
 
     async def delete(self, user_id: int, author_id: int) -> None:
-        query = follow.delete().where(
+        await self.database.execute(follow.delete().where(
             follow.c.user_id == user_id, follow.c.author_id == author_id)
-        await self.database.execute(query)
+        )
+        return True

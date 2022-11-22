@@ -6,35 +6,35 @@ from pydantic import BaseModel
 from users.schemas import Body, UserSchemas
 
 
-class Tag(BaseModel):
+class STag(BaseModel):
     name: str = Form()
     color: str = Form(min_length=6, max_length=6)
     slug: str = Form()
 
 
-class Tags(BaseModel):
+class STags(BaseModel):
     id: int
     name: str
     color: str
     slug: str
 
 
-class Ingredient(BaseModel):
+class SIngredient(BaseModel):
     name: str = Form()
     measurement_unit: str = Form()
 
 
-class Ingredients(BaseModel):
+class SIngredients(BaseModel):
     id: int
     name: str
     measurement_unit: str
 
 
-class Amount(Ingredients):
+class SAmount(SIngredients):
     amount: int
 
 
-class AmountIngredient(BaseModel):
+class SAmountIngredient(BaseModel):
     id: int = 0
     amount: int | str = 0
 
@@ -49,34 +49,43 @@ class AmountIngredient(BaseModel):
         return value
 
 
-class Favorite(BaseModel):
+class SFavorite(BaseModel):
     id: int
     name: str
     image: str
     cooking_time: int
 
 
-class LoadRecipe(BaseModel):
+class SLoadRecipe(BaseModel):
     text: str = Form(...)
     name: str = Form(...)
     image: str = Form(...)
     cooking_time: int = Form(...)
-    ingredients: list[AmountIngredient] = Form(...)
+    ingredients: list[SAmountIngredient] = Form(...)
     tags: list[int] = Form(...)
 
 
-class Recipe(BaseModel):
+class SPatchRecipe(BaseModel):
+    text: str = Form(...)
+    name: str = Form(...)
+    image: str | None
+    cooking_time: int = Form(...)
+    ingredients: list[SAmountIngredient] = Form(...)
+    tags: list[int] = Form(...)
+
+
+class SRecipe(BaseModel):
     id: int
     name: str
     image: str
-    tags: list[Tags]
+    tags: list[STags]
     author: UserSchemas
-    ingredients: list[Amount]
+    ingredients: list[SAmount]
     text: str
     cooking_time: int
     is_favorited: bool = False
     is_in_shopping_cart: bool = False
 
 
-class listRecipe(Body):
-    results: list[Recipe] | None = []
+class SlistRecipe(Body):
+    results: list[SRecipe] | None = []

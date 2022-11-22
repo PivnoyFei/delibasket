@@ -2,6 +2,7 @@ from fastapi import FastAPI, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from db import database, engine, metadata
 from recipes import api_recipe
@@ -28,6 +29,11 @@ async def shutdown() -> None:
     database_ = app.state.database
     if database_.is_connected:
         await database_.disconnect()
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    return JSONResponse({"detail": f"{exc.detail}"}, exc.status_code)
 
 
 @app.exception_handler(RequestValidationError)
