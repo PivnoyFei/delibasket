@@ -5,8 +5,6 @@
 ## Описание
 Проект Foodgram, «Продуктовый помощник». На этом сервисе пользователи смогут публиковать рецепты, подписываться на публикации других пользователей, добавлять понравившиеся рецепты в список «Избранное», а перед походом в магазин скачивать сводный список продуктов, необходимых для приготовления одного или нескольких выбранных блюд.
 
-### Прогрес `90%`
-
 ### Что могут делать неавторизованные пользователи
 - Создать аккаунт.
 - Просматривать рецепты на главной.
@@ -39,11 +37,12 @@
 ![Python](https://img.shields.io/badge/Python-171515?style=flat-square&logo=Python)![3.11](https://img.shields.io/badge/3.11-blue?style=flat-square&logo=3.11)
 ![FastAPI](https://img.shields.io/badge/FastAPI-171515?style=flat-square&logo=FastAPI)![0.85.0](https://img.shields.io/badge/0.85.0-blue?style=flat-square&logo=0.85.0)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-171515?style=flat-square&logo=PostgreSQL)![13.0](https://img.shields.io/badge/13.0-blue?style=flat-square&logo=13.0)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-171515?style=flat-square&logo=SQLAlchemy)
 ![Docker](https://img.shields.io/badge/Docker-171515?style=flat-square&logo=Docker)
 ![Docker-compose](https://img.shields.io/badge/Docker--compose-171515?style=flat-square&logo=Docker)
 ![Nginx](https://img.shields.io/badge/Nginx-171515?style=flat-square&logo=Nginx)
 ![GitHub](https://img.shields.io/badge/GitHub-171515?style=flat-square&logo=GitHub)
-![GitHub-Actions](https://img.shields.io/badge/GitHub--Actions-171515?style=flat-square&logo=GitHub-Actions)
+
 
 ### Запуск проекта
 Клонируем репозиторий и переходим в него:
@@ -95,7 +94,7 @@ docker-compose down -v
 docker-compose exec backend python createsuperuser.py
 ```
 
-#### Загрузка ингредиентов и тегов в бд после запуска контейнера, выберите то что нужно без `<>`:
+#### Загрузка ингредиентов и тегов в бд после запуска контейнера, выберите то что нужно без `<>`, по умолчанию попробует загрузить оба файла:
 ```bash
 docker-compose exec backend python load_json.py <ingredients.json / tags.json>
 ```

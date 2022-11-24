@@ -9,11 +9,6 @@ import sqlalchemy
 from recipes.models import ingredient, tag
 from settings import DATA_ROOT, DATABASE_URL
 
-engine = sqlalchemy.create_engine(DATABASE_URL)
-engine.connect()
-metadata = sqlalchemy.MetaData(engine)
-metadata.reflect(engine)
-
 
 def load_ingredients(filename):
     try:
@@ -39,6 +34,19 @@ def load_tags(filename):
         print(f'Файл {filename} отсутствует в каталоге data')
 
 
+engine = sqlalchemy.create_engine(DATABASE_URL)
+engine.connect()
+metadata = sqlalchemy.MetaData(engine)
+metadata.reflect(engine)
+
 command_load = {"ingredients.json": load_ingredients, "tags.json": load_tags}
-data = sys.argv[-1]
-command_load[data](data)
+data = sys.argv
+if len(data) > 1:
+    data = data[-1]
+    if data in command_load:
+        command_load[data](data)
+    else:
+        print(f'Файл {data} отсутствует в каталоге data')
+else:
+    for i in command_load.keys():
+        command_load[i](i)

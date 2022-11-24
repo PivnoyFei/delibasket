@@ -13,7 +13,6 @@ app = FastAPI()
 app.state.database = database
 metadata.create_all(engine)
 
-
 app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 

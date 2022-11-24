@@ -3,7 +3,6 @@ docker==6.0.0
 asyncpg==0.26.0
 databases==0.6.1
 fastapi==0.85.0
-fastapi-pagination==0.10.0
 Jinja2==3.1.2
 requests==2.28.1
 pytest==6.2.4

@@ -1,6 +1,6 @@
 from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy import (CheckConstraint, Column, DateTime, ForeignKey, Integer,
-                        String, Table, Text, UniqueConstraint, and_, case,
+                        String, Table, Text, UniqueConstraint, and_, case, or_,
                         select)
 from sqlalchemy.sql import func
 from starlette.requests import Request
@@ -176,7 +176,6 @@ class Amount(Base):
 
 class Recipe(Base):
     async def _create_recipe_tag(self, recipe_id, tags):
-        print(recipe_id, tags)
         tags = [{"recipe_id": recipe_id, "tag_id": i} for i in tags]
         await self.database.execute(recipe_tag.insert().values(tags))
 
@@ -290,14 +289,13 @@ class Recipe(Base):
         pk: int = None,
         tags: list[int] = None,
         page: int = None,
-        limit: int = None,
+        limit: int = 6,
         author: int = None,
         is_favorited: bool = True,
         is_in_cart: bool = True,
         user_id: int = None,
         request: Request = None
     ) -> list[SRecipe] | None:
-
         query = (
             select(
                 recipe.c.id,
@@ -337,7 +335,7 @@ class Recipe(Base):
                     query
                     .join(recipe_tag, recipe_tag.c.recipe_id == recipe.c.id)
                     .join(tag, recipe_tag.c.tag_id == tag.c.id)
-                    .where(tag.c.slug.in_(tags.tags))
+                    .where(or_(tag.c.slug == slug for slug in tags.tags))
                     .group_by(recipe.c.id, favorites.c.user_id, cart.c.user_id)
                     .having(func.count(tag.c.slug) == len(tags.tags))
                 )
