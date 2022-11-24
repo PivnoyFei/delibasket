@@ -43,11 +43,13 @@ async def create_ingredient(ingredient: SIngredient, user: User = PROTECTED):
 
 @router.post("/tag/{pk}/", response_model=STags)
 async def update_tag(tag: STag, pk: str, user: User = PROTECTED):
+    """ Редактировать теги может только администратор. """
     return await utils_tag_ingredient(db_tag.update_tag, tag, user, pk)
 
 
 @router.post("/ingredient/{pk}/", response_model=SIngredients)
 async def update_ingred(ingred: SIngredient, pk: int, user: User = PROTECTED):
+    """ Редактировать ингредиенты может только администратор. """
     return await utils_tag_ingredient(
         db_ingredient.update_ingredient, ingred, user, pk)
 
@@ -64,7 +66,12 @@ async def tags_ingredients(
     pk: int = None,
     user: User = PROTECTED
 ):
-    """ Удалять ингредиенты и теги может только администратор. """
+    """
+    /tags/ или /ingredients/ - выдает список тегов/ингредиентов,
+    query параметр name= выдает тег/ингредиент по имени.
+    /tags/{pk}/ или /ingredients/{pk}/ - выдает тег/ингредиент по id.
+    Удалять ингредиенты и теги может только администратор.
+    """
     if "tags" in str(request.url.path):
         db_model_delete = db_tag.delete_tag
         db_model_get = db_tag.get_tags
@@ -83,6 +90,7 @@ async def tags_ingredients(
 async def create_recipe(
     request: Request, recipe: SLoadRecipe, user: User = PROTECTED
 ):
+    """ Создает рецепт. Картинка в фронтенда поступает в формате base64. """
     if not user:
         return NOT_AUTHENTICATED
     await check_tags(recipe.tags)
@@ -198,6 +206,10 @@ async def recipes(
 async def update_recipe(
     request: Request, pk: int, recipe: SPatchRecipe, user: User = PROTECTED
 ):
+    """
+    Перед редактированием рецепта, фронтенд получает данные рецепта
+    и после изменения пользователем отправляет сюда.
+    """
     if not user:
         return NOT_AUTHENTICATED
     author = await db_recipe.check_recipe_image_by_id(pk)
@@ -236,6 +248,7 @@ async def update_recipe(
 @router.post("/recipes/{pk}/shopping_cart/", response_model=SFavorite)
 @router.delete("/recipes/{pk}/shopping_cart/")
 async def delete_cart(request: Request, pk: int, user: User = PROTECTED):
+    """ Обрабатывает запросы подписки на рецепты и добавления в корзину. """
     if not user:
         return NOT_AUTHENTICATED
     db_model = favorites if "favorite" in str(request.url.path) else cart

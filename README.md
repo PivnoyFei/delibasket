@@ -95,9 +95,9 @@ docker-compose down -v
 docker-compose exec backend python createsuperuser.py
 ```
 
-#### Загрузка ингредиентов и тегов в бд после запуска контейнера:
+#### Загрузка ингредиентов и тегов в бд после запуска контейнера, выберите то что нужно без `<>`:
 ```bash
-docker-compose exec backend python load_json.py
+docker-compose exec backend python load_json.py <ingredients.json / tags.json>
 ```
 
 #### Автор

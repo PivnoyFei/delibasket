@@ -1,13 +1,10 @@
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-env_path = Path(".") / "infra/.env"
-load_dotenv(dotenv_path=env_path)
-
+load_dotenv()
 
 POSTGRES_DB = os.getenv("POSTGRES_DB", default="postgres")
 POSTGRES_USER = os.getenv("POSTGRES_USER", default="postgres")
