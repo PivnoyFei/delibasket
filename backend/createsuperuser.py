@@ -3,11 +3,11 @@ from dataclasses import asdict, dataclass
 
 import sqlalchemy
 
-from settings import settings
+from settings import DATABASE_URL
 from users.models import users
 from users.utils import password_context
 
-engine = sqlalchemy.create_engine(settings.DATABASE_URL)
+engine = sqlalchemy.create_engine(DATABASE_URL)
 engine.connect()
 metadata = sqlalchemy.MetaData(engine)
 metadata.reflect(engine)

@@ -7,7 +7,12 @@ from starlette.requests import Request
 
 
 class OAuth2PasswordToken(OAuth2PasswordBearer):
-    async def __call__(self, request: Request) -> Optional[str]:
+    """
+    Проверяет токен авторизованного пользователя и возвращает токен или ошибку.
+    Если пользователь не авторизован выдает None для доступа неавторизованным
+    пользователям.
+    """
+    async def __call__(self, request: Request) -> Optional[str | None]:
         authorization: str = request.headers.get("Authorization")
         if not authorization:
             return None

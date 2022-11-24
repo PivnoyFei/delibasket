@@ -26,6 +26,7 @@ class QueryParams:
 
 
 async def check_tags(tags):
+    """ Проверка наличия в бд, всех тегов из списка. """
     for i in tags:
         if not await db_tag.get_tags(i):
             raise JSONResponse(
@@ -35,6 +36,7 @@ async def check_tags(tags):
 
 
 async def check_ingredient(ingredients):
+    """ Проверка наличия в бд, всех ингредиентов из списка. """
     for i in ingredients:
         i = i["id"]
         if not await db_ingredient.get_ingredient(i):
@@ -58,6 +60,7 @@ async def utils_tag_ingredient(db_model, item, user, pk=None):
 
 
 async def create_cart_favorite(request, pk, user, db_model):
+    """ Распределяет модели подписки на рецепт и добавления в корзину. """
     if not user:
         return NOT_AUTHENTICATED
     recipe = await db_recipe.check_recipe_by_id_author(request, recipe_id=pk)
@@ -65,11 +68,11 @@ async def create_cart_favorite(request, pk, user, db_model):
         if not await db_favorite_cart.create(pk, user.id, db_model):
             return JSONResponse(
                 {"detail": "Already added"}, status.HTTP_400_BAD_REQUEST)
-    print("recipe", recipe)
     return recipe or NOT_FOUND
 
 
 async def delete_cart_favorite(pk, user, db_model) -> JSONResponse | Response:
+    """ Распределяет модели отписки от рецепта и удаление из корзины. """
     if not user:
         return NOT_AUTHENTICATED
     await db_favorite_cart.delete(pk, user.id, db_model)
@@ -77,6 +80,10 @@ async def delete_cart_favorite(pk, user, db_model) -> JSONResponse | Response:
 
 
 async def base64_image(base64_data, extension="jpg") -> tuple[str, str]:
+    """
+    Проверяет формат файла если он есть.
+    При удачном декодировании base64, файл будет сохранен.
+    """
     if ";base64," in base64_data:
         header, base64_data = base64_data.split(";base64,")
         name, extension = header.split("/")
@@ -86,9 +93,6 @@ async def base64_image(base64_data, extension="jpg") -> tuple[str, str]:
     filename = f"{uuid4()}.{extension}"
     image_path = os.path.join(MEDIA_ROOT, filename)
 
-    # base64_data = base64.decodebytes(bytes(recipe.image, "utf-8"))
-    # image = Image.open(BytesIO(base64_data))
-    # image.save(image_path)
     try:
         async with aiofiles.open(image_path, "wb") as buffer:
             await buffer.write(base64.b64decode(base64_data))

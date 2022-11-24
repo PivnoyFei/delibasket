@@ -12,6 +12,10 @@ async def query_list(
     page: int | None = None,
     limit: int | None = None
 ):
+    """
+    Составляет json ответ для пользователя в соответствии с требованиями.
+    Составляет следующую, предыдущую и количество страниц для пагинации.
+    """
     next_page = (
         str(request.url).replace(f"page={page}", f"page={page + 1}")
         if page and page * limit < count else None
