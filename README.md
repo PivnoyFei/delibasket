@@ -1,7 +1,9 @@
-<h1 align="center"><a target="_blank" href="">Проект Продуктовый помошник</a></h1>
+[![Build Status](https://github.com/PivnoyFei/delibasket/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/PivnoyFei/delibasket/actions/workflows/main.yml)
+
+<h1 align="center"><a target="_blank" href="">электронная продуктовая корзина</a></h1>
 
 ## Описание
-Проект Delibasket, «Продуктовый помощник». На этом сервисе пользователи смогут публиковать рецепты, подписываться на публикации других пользователей, добавлять понравившиеся рецепты в список «Избранное», а перед походом в магазин скачивать сводный список продуктов, необходимых для приготовления одного или нескольких выбранных блюд.
+Проект Delibasket, «Пэлектронная продуктовая корзина». На этом сервисе пользователи смогут публиковать рецепты, подписываться на публикации других пользователей, добавлять понравившиеся рецепты в список «Избранное», а перед походом в магазин скачивать сводный список продуктов, необходимых для приготовления одного или нескольких выбранных блюд.
 
 ### Что могут делать неавторизованные пользователи
 - Создать аккаунт.
@@ -36,6 +38,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-171515?style=flat-square&logo=FastAPI)![0.85.0](https://img.shields.io/badge/0.85.0-blue?style=flat-square&logo=0.85.0)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-171515?style=flat-square&logo=PostgreSQL)![13.0](https://img.shields.io/badge/13.0-blue?style=flat-square&logo=13.0)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-171515?style=flat-square&logo=SQLAlchemy)
+![Alembic](https://img.shields.io/badge/Alembic-171515?style=flat-square&logo=Alembic)
 ![Docker](https://img.shields.io/badge/Docker-171515?style=flat-square&logo=Docker)
 ![Docker-compose](https://img.shields.io/badge/Docker--compose-171515?style=flat-square&logo=Docker)
 ![Nginx](https://img.shields.io/badge/Nginx-171515?style=flat-square&logo=Nginx)
