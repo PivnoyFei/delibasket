@@ -1,3 +1,4 @@
+# flake8: noqa: F401
 """ Генерирует рандомные рецепты для тестов. """
 
 import asyncio
@@ -5,6 +6,7 @@ import random
 import string
 import uuid
 
+import __init__
 import sqlalchemy as sa
 from db import Base
 from recipes.models import Amount_ingredient, Recipe, Recipe_tag

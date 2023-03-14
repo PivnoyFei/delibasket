@@ -1,7 +1,11 @@
+# flake8: noqa: F401
+""" Создание суперюзера. """
+
 import asyncio
 import getpass
 from dataclasses import asdict, dataclass
 
+import __init__
 import sqlalchemy as sa
 from db import Base
 from settings import DATABASE_URL

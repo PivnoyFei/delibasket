@@ -1,3 +1,4 @@
+# flake8: noqa: F401
 """Загружает данные в таблицу из файла json."""
 import asyncio
 import json
@@ -5,6 +6,7 @@ import os
 import sys
 from typing import Any
 
+import __init__
 import sqlalchemy as sa
 from db import Base
 from recipes.models import Ingredient, Tag

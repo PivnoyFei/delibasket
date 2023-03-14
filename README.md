@@ -1,9 +1,9 @@
 [![Build Status](https://github.com/PivnoyFei/delibasket/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/PivnoyFei/delibasket/actions/workflows/main.yml)
 
-<h1 align="center"><a target="_blank" href="">электронная продуктовая корзина</a></h1>
+<h1 align="center"><a target="_blank" href="">Электронная продуктовая корзина</a></h1>
 
 ## Описание
-Проект Delibasket, «Пэлектронная продуктовая корзина». На этом сервисе пользователи смогут публиковать рецепты, подписываться на публикации других пользователей, добавлять понравившиеся рецепты в список «Избранное», а перед походом в магазин скачивать сводный список продуктов, необходимых для приготовления одного или нескольких выбранных блюд.
+Проект Delibasket, «Электронная продуктовая корзина». На этом сервисе пользователи смогут публиковать рецепты, подписываться на публикации других пользователей, добавлять понравившиеся рецепты в список «Избранное», а перед походом в магазин скачивать сводный список продуктов, необходимых для приготовления одного или нескольких выбранных блюд.
 
 ### Что могут делать неавторизованные пользователи
 - Создать аккаунт.
@@ -108,12 +108,12 @@ docker-compose down -v
 
 #### Создание суперпользователя:
 ```bash
-docker-compose exec backend python createsuperuser.py
+docker-compose exec backend python commands/createsuperuser.py
 ```
 
 #### Загрузка ингредиентов и тегов в бд после запуска контейнера, выберите то что нужно без `<>`, по умолчанию попробует загрузить оба файла:
 ```bash
-docker-compose exec backend python load_json.py <ingredients.json / tags.json>
+docker-compose exec backend python commands/load_json.py <ingredients.json / tags.json>
 ```
 
 #### Автор
