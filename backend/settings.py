@@ -17,7 +17,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default='localhost')
 TESTING = os.getenv("TESTING", default=False)
 if TESTING:
     POSTGRES_SERVER = "db-test"
-DATABASE_URL = (f"postgresql://{POSTGRES_USER}:"
+DATABASE_URL = (f"postgresql+asyncpg://{POSTGRES_USER}:"
                 f"{POSTGRES_PASSWORD}@"
                 f"{POSTGRES_SERVER}:"
                 f"{POSTGRES_PORT}/"
@@ -25,7 +25,7 @@ DATABASE_URL = (f"postgresql://{POSTGRES_USER}:"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MEDIA_URL = 'media/'
+MEDIA_URL = 'media'
 MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_URL)
 FILES_ROOT = os.path.join(MEDIA_ROOT, "files")
 DATA_ROOT = os.path.join(BASE_DIR, "data")

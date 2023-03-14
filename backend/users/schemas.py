@@ -19,16 +19,19 @@ class UserAuth(BaseModel):
 
 
 class TokenBase(BaseModel):
-    auth_token: str
+    auth_token: str = Field(...)
 
 
-class UserSchemas(BaseModel):
+class UserOut(BaseModel):
     id: int
     email: EmailStr
     username: str
     first_name: str
     last_name: str
-    is_subscribed: bool = False
+    is_subscribed: bool | None = False
+
+    class Config:
+        orm_mode = True
 
 
 class UserBase(BaseModel):
@@ -38,6 +41,9 @@ class UserBase(BaseModel):
     last_name: str
     is_subscribed: bool = False
 
+    class Config:
+        orm_mode = True
+
 
 class Body(BaseModel):
     count: int
@@ -46,7 +52,7 @@ class Body(BaseModel):
 
 
 class ListUsers(Body):
-    results: list[UserSchemas] = []
+    results: list[UserOut] | list = []
 
 
 class SFavorite(BaseModel):
@@ -70,14 +76,9 @@ class SetPassword(BaseModel):
     new_password: str = Field(..., description="New Password")
 
     @root_validator()
-    def validator(cls, value):
-        print(value)
+    def validator(cls, value: dict) -> dict:
         if value["current_password"] == value["new_password"]:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, "Incorrect password"
             )
         return value
-
-
-class IsActive(BaseModel):
-    is_active: bool

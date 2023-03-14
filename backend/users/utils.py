@@ -1,11 +1,12 @@
+from db import get_session
 from fastapi import Depends, HTTPException, status
 from passlib.context import CryptContext
-
-from db import database
-from users.models import Token
+from sqlalchemy.ext.asyncio import AsyncSession
+from users.models import TokenDB, User
+from users.schemas import UserOut
 from users.user_deps import OAuth2PasswordToken
 
-db_token = Token(database)
+SESSION = Depends(get_session)
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordToken(
     tokenUrl="/api/auth/token/login/", scheme_name="Authorize"
@@ -22,12 +23,14 @@ async def verify_password(password: str, hashed_pass: str) -> bool:
     return password_context.verify(password, hashed_pass)
 
 
-async def get_current_user(token: str | None = Depends(oauth2_scheme)):
+async def get_current_user(
+    token: str | None = Depends(oauth2_scheme), session: AsyncSession = SESSION
+) -> UserOut | None:
     """Проверяет текущего авторизированного пользователя."""
     if not token:
         return None
 
-    user = await db_token.check_token(token)
+    user: User = await TokenDB.check(session, token)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -77,6 +77,16 @@ POSTGRES_PORT='5432' # порт для подключения к БД
 cd infra
 ```
 
+### Быстрый запуск, из контейнеров запускаем только бд:
+```bash
+docker-compose up -d db
+```
+
+#### Открываем в консоли папку backend и запускаем сервер:
+```bash
+uvicorn main:app --reload --host 0.0.0.0
+```
+
 ### Запуск проекта
 ```bash
 docker-compose up -d --build

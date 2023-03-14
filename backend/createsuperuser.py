@@ -1,20 +1,18 @@
+import asyncio
 import getpass
 from dataclasses import asdict, dataclass
 
-import sqlalchemy
-
+import sqlalchemy as sa
+from db import Base
 from settings import DATABASE_URL
-from users.models import users
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+from users.models import User
 from users.utils import password_context
-
-engine = sqlalchemy.create_engine(DATABASE_URL)
-engine.connect()
-metadata = sqlalchemy.MetaData(engine)
-metadata.reflect(engine)
 
 
 @dataclass
-class User:
+class UserData:
     email: str
     password: str
     username: str
@@ -26,17 +24,17 @@ class User:
 
 
 class Createsuperuser:
-    def __init__(self, email, password, username, first_name, last_name):
-        self.user = User(email, password, username, first_name, last_name)
+    def __init__(self, email: str, password: str, username: str, first_name: str, last_name: str) -> None:
+        self.user = UserData(email, password, username, first_name, last_name)
 
     @property
     def get_dataclass(self) -> dict[str]:
         return asdict(self.user)
 
-    def edit(self, key, value) -> None:
+    def edit(self, key: str, value: str) -> None:
         self.user.__dict__[key] = value
 
-    def check(self, key) -> str:
+    def check(self, key: str) -> str:
         if key == "password":
             value = getpass.getpass(f"Введите {key}: ")
             if value != getpass.getpass(f"Повторите {key}: "):
@@ -53,9 +51,29 @@ class Createsuperuser:
         return value
 
 
+async def async_main(a: Createsuperuser) -> None:
+    engine = create_async_engine(DATABASE_URL, echo=True)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+    async with async_session() as session:
+
+        try:
+            await session.execute(sa.insert(User).values(a.get_dataclass))
+
+        except TypeError:
+            print('email или username уже существует')
+
+        await session.commit()
+    await engine.dispose()
+
+
 a = Createsuperuser("", "", "", "", "")
 for key in a.get_dataclass:
     if key not in ("is_active", "is_staff", "is_superuser"):
         a.edit(key, a.check(key))
 
-engine.execute(users.insert().values(a.get_dataclass))
+asyncio.run(async_main(a))

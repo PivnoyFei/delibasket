@@ -1,9 +1,15 @@
 import json
+from typing import Any
 
-from fastapi import Form
+from fastapi import Form, Query
 from pydantic import BaseModel
+from pydantic.dataclasses import dataclass
+from users.schemas import Body, UserOut
 
-from users.schemas import Body, UserSchemas
+
+@dataclass
+class QueryParams:
+    tags: list[int | str] = Query(None)
 
 
 class STag(BaseModel):
@@ -12,7 +18,7 @@ class STag(BaseModel):
     slug: str = Form()
 
 
-class STags(BaseModel):
+class TagOut(BaseModel):
     id: int
     name: str
     color: str
@@ -24,13 +30,13 @@ class SIngredient(BaseModel):
     measurement_unit: str = Form()
 
 
-class SIngredients(BaseModel):
+class IngredientOut(BaseModel):
     id: int
     name: str
     measurement_unit: str
 
 
-class SAmount(SIngredients):
+class AmountOut(IngredientOut):
     amount: int
 
 
@@ -39,24 +45,24 @@ class SAmountIngredient(BaseModel):
     amount: int | str = 0
 
     @classmethod
-    def __get_validators__(cls):
+    def __get_validators__(cls) -> Any:
         yield cls.validate_to_json
 
     @classmethod
-    def validate_to_json(cls, value):
+    def validate_to_json(cls, value: Any) -> Any:
         if isinstance(value, str):
             return cls(**json.loads(value))
         return value
 
 
-class SFavorite(BaseModel):
+class FavoriteOut(BaseModel):
     id: int
     name: str
     image: str
     cooking_time: int
 
 
-class SLoadRecipe(BaseModel):
+class CreateRecipe(BaseModel):
     text: str = Form(...)
     name: str = Form(...)
     image: str = Form(...)
@@ -65,7 +71,7 @@ class SLoadRecipe(BaseModel):
     tags: list[int] = Form(...)
 
 
-class SPatchRecipe(BaseModel):
+class PatchRecipe(BaseModel):
     text: str = Form(...)
     name: str = Form(...)
     image: str | None
@@ -74,18 +80,18 @@ class SPatchRecipe(BaseModel):
     tags: list[int] = Form(...)
 
 
-class SRecipe(BaseModel):
+class RecipeOut(BaseModel):
     id: int
     name: str
     image: str
-    tags: list[STags]
-    author: UserSchemas
-    ingredients: list[SAmount]
+    tags: list[TagOut]
+    author: UserOut
+    ingredients: list[AmountOut]
     text: str
     cooking_time: int
     is_favorited: bool = False
     is_in_shopping_cart: bool = False
 
 
-class SlistRecipe(Body):
-    results: list[SRecipe] | None = []
+class listRecipe(Body):
+    results: list[RecipeOut] | None = []

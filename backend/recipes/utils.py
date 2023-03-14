@@ -1,85 +1,60 @@
 import base64
 import binascii
 import os
+from typing import Any
 from uuid import uuid4
 
 import aiofiles
-from fastapi import Query, status
-from fastapi.responses import JSONResponse, Response
-from pydantic.dataclasses import dataclass
-from starlette.exceptions import HTTPException
-
-from db import database
-from recipes.models import FavoriteCart, Ingredient, Recipe, Tag
+from fastapi import status
+from fastapi.responses import JSONResponse
+from recipes.models import FavoriteCartDB, RecipeDB
+from recipes.schemas import FavoriteOut
 from settings import (ALLOWED_TYPES, INVALID_FILE, INVALID_TYPE, MEDIA_ROOT,
                       NOT_AUTHENTICATED, NOT_FOUND)
-
-db_tag = Tag(database)
-db_recipe = Recipe(database)
-db_ingredient = Ingredient(database)
-db_favorite_cart = FavoriteCart(database)
-
-
-@dataclass
-class QueryParams:
-    tags: list[int | str] = Query(None)
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.exceptions import HTTPException
+from starlette.requests import Request
+from users.models import User
 
 
-async def check_tags(tags):
-    """ Проверка наличия в бд, всех тегов из списка. """
-    for i in tags:
-        if not await db_tag.get_tags(i):
-            raise JSONResponse(
-                {"detail": f"Not tag {i}"}, status.HTTP_404_NOT_FOUND
-            )
-    return True
-
-
-async def check_ingredient(ingredients):
-    """ Проверка наличия в бд, всех ингредиентов из списка. """
-    for i in ingredients:
-        i = i["id"]
-        if not await db_ingredient.get_ingredient(i):
-            raise JSONResponse(
-                {"detail": f"Not ingredient {i}"}, status.HTTP_404_NOT_FOUND
-            )
-    return True
-
-
-async def utils_tag_ingredient(db_model, item, user, pk=None):
+async def tag_ingredient(
+    session: AsyncSession, db_model: Any, item: Any, user: User, pk: int | None = None
+) -> JSONResponse:
     """ Распределяет модели создания и редактирования тегов и ингредиентов. """
     if not user:
         return NOT_AUTHENTICATED
     if user.is_staff or user.is_superuser:
-        e = await db_model(item, pk)
-        if type(e) != int:
+        e = await db_model(session, item, pk)
+        if e and type(e) not in (int, dict):
             e = str(e).split(": ")[-1]
             return JSONResponse(f"Incorrect {e}", status.HTTP_400_BAD_REQUEST)
-        return Response(status_code=status.HTTP_200_OK)
-    return Response(status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(e, status_code=status.HTTP_200_OK)
+    return JSONResponse("No access", status_code=status.HTTP_403_FORBIDDEN)
 
 
-async def create_cart_favorite(request, pk, user, db_model):
+async def create_cart_favorite(
+    request: Request, pk: int, user: User, db_model: Any, session: AsyncSession
+) -> JSONResponse | list[FavoriteOut]:
     """ Распределяет модели подписки на рецепт и добавления в корзину. """
     if not user:
         return NOT_AUTHENTICATED
-    recipe = await db_recipe.check_recipe_by_id_author(request, recipe_id=pk)
+    recipe = await RecipeDB.check_recipe_by_id_author(session, request, recipe_id=pk)
     if recipe:
-        if not await db_favorite_cart.create(pk, user.id, db_model):
-            return JSONResponse(
-                {"detail": "Already added"}, status.HTTP_400_BAD_REQUEST)
+        if not await FavoriteCartDB.create(session, pk, user.id, db_model):
+            return JSONResponse({"detail": "Already added"}, status.HTTP_400_BAD_REQUEST)
     return recipe or NOT_FOUND
 
 
-async def delete_cart_favorite(pk, user, db_model) -> JSONResponse | Response:
+async def delete_cart_favorite(pk: int, user: User, db_model: Any, session: AsyncSession) -> JSONResponse:
     """ Распределяет модели отписки от рецепта и удаление из корзины. """
     if not user:
         return NOT_AUTHENTICATED
-    await db_favorite_cart.delete(pk, user.id, db_model)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    if not await FavoriteCartDB.delete(session, pk, user.id, db_model):
+        return JSONResponse({"detail": "Already deleted"}, status.HTTP_400_BAD_REQUEST)
+    return JSONResponse({"detail": "Deleted"}, status.HTTP_204_NO_CONTENT)
 
 
-async def base64_image(base64_data, extension="jpg") -> tuple[str, str]:
+async def base64_image(base64_data: str, extension: str = "jpg") -> tuple[str, str]:
     """
     Проверяет формат файла если он есть.
     При удачном декодировании base64, файл будет сохранен.

@@ -1,52 +1,53 @@
-"""Загружает данные в уже созданую таблицу из файла json."""
-
+"""Загружает данные в таблицу из файла json."""
+import asyncio
 import json
 import os
 import sys
+from typing import Any
 
-import sqlalchemy
-
-from recipes.models import ingredient, tag
+import sqlalchemy as sa
+from db import Base
+from recipes.models import Ingredient, Tag
 from settings import DATA_ROOT, DATABASE_URL
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 
-def load_ingredients(filename):
-    try:
-        with open(os.path.join(DATA_ROOT, filename), encoding='utf-8') as file:
-            f = dict((item["name"], item) for item in json.load(file)).values()
+async def async_main(filename: str, model_db: Any) -> None:
+    engine = create_async_engine(DATABASE_URL, echo=True)
 
-            for item in f:
-                engine.execute(ingredient.insert().values(**item))
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-    except TypeError:
-        print(f'Файл {filename} отсутствует в каталоге data')
+    async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+    async with async_session() as session:
+
+        try:
+            with open(os.path.join(DATA_ROOT, filename), encoding='utf-8') as file:
+                items = dict((item["name"], item) for item in json.load(file)).values()
+                for item in items:
+                    await session.execute(sa.insert(model_db).values(**item))
+
+        except TypeError:
+            print(f'Файл {filename} отсутствует в каталоге data')
+
+        await session.commit()
+    await engine.dispose()
 
 
-def load_tags(filename):
-    try:
-        with open(os.path.join(DATA_ROOT, filename), encoding='utf-8') as file:
-            f = dict((item["name"], item) for item in json.load(file)).values()
-
-            for item in f:
-                engine.execute(tag.insert().values(**item))
-
-    except FileNotFoundError:
-        print(f'Файл {filename} отсутствует в каталоге data')
-
-
-engine = sqlalchemy.create_engine(DATABASE_URL)
-engine.connect()
-metadata = sqlalchemy.MetaData(engine)
-metadata.reflect(engine)
-
-command_load = {"ingredients.json": load_ingredients, "tags.json": load_tags}
-data = sys.argv
-if len(data) > 1:
-    data = data[-1]
+command_load = {
+    "ingredients.json": Ingredient,
+    "tags.json": Tag,
+}
+data_load = sys.argv
+if len(data_load) > 1:
+    data: str = data_load[-1]
     if data in command_load:
-        command_load[data](data)
+        asyncio.run(async_main(data, command_load[data]))
     else:
         print(f'Файл {data} отсутствует в каталоге data')
 else:
     for i in command_load.keys():
-        command_load[i](i)
+        print('====', i)
+        asyncio.run(async_main(i, command_load[i]))

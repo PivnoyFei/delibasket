@@ -1,66 +1,69 @@
-from fastapi import APIRouter, Depends, status
-from fastapi.responses import JSONResponse, Response
-from starlette.requests import Request
+from typing import Any
 
-from db import database
-from recipes.models import Recipe
+from db import get_session
+from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import JSONResponse, Response
+from recipes.models import RecipeDB
 from services import query_list
 from settings import NOT_AUTHENTICATED, NOT_FOUND
-from users.models import Follow, User
-from users.schemas import (IsActive, ListUsers, SetPassword, SFollow,
-                           Subscriptions, UserCreate, UserRegistration,
-                           UserSchemas)
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import Request
+from users.models import FollowDB, User, UserDB
+from users.schemas import (ListUsers, SetPassword, SFollow, Subscriptions,
+                           UserCreate, UserOut, UserRegistration)
 from users.utils import get_current_user, get_hashed_password, verify_password
 
 router = APIRouter(prefix='/users', tags=["users"])
 PROTECTED = Depends(get_current_user)
-db_recipe = Recipe(database)
-db_user = User(database)
-db_follow = Follow(database)
+SESSION = Depends(get_session)
 
 
-@router.get("/", response_model=ListUsers)
-async def users(user: User = PROTECTED):
+@router.get("/", response_model=ListUsers, status_code=status.HTTP_200_OK)
+async def users(request: Request, user: User = PROTECTED, session: AsyncSession = SESSION) -> dict:
     """ Список всех пользователей. """
-    user = await db_user.get_users(user.id if user else None)
-    return await query_list(user, count=len(user))
+    user_list = await UserDB.get_users(session, user.id if user else None)
+    return await query_list(user_list, request, count=len(user))
 
 
-@router.post("/", response_model=UserRegistration)
+@router.post("/", response_model=UserRegistration, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    user: UserCreate, is_staff: bool = False, admin: User = PROTECTED
-):
+    user: UserCreate,
+    is_staff: bool = False,
+    admin: User = PROTECTED,
+    session: AsyncSession = SESSION
+) -> User | JSONResponse:
     """ Администратор может создавать акаунты с правами. """
-    if await db_user.get_user_by_email(user.email):
+    if await UserDB.is_email(session, user.email):
         return JSONResponse(
             {"detail": "Email already exists"},
             status.HTTP_400_BAD_REQUEST
         )
-    if await db_user.get_user_by_username(user.username):
+    if await UserDB.is_username(session, user.username):
         return JSONResponse(
             {"detail": "Username already exists"},
             status.HTTP_400_BAD_REQUEST
         )
     user.password = await get_hashed_password(user.password)
     is_staff = is_staff if admin and admin.is_staff else False
-    user_id = await db_user.create(user, is_staff)
-    return await db_user.get_user_full_by_id(user_id)
+    return await UserDB.create(session, user, is_staff)
 
 
-@router.get("/me/", response_model=UserSchemas)
-async def me(user: User = PROTECTED):
+@router.get("/me/", response_model=UserOut, status_code=status.HTTP_200_OK)
+async def me(user: User = PROTECTED) -> User | JSONResponse:
     """Текущий пользователь."""
     return user or NOT_AUTHENTICATED
 
 
-@router.get("/subscriptions/", response_model=Subscriptions)
+@router.get("/subscriptions/", response_model=Subscriptions, status_code=status.HTTP_200_OK)
 async def subscriptions(
     request: Request,
-    page: int = None,
-    limit: int = None,
-    recipes_limit: int = None,
-    user: User = PROTECTED
-):
+    page: int = Query(1, ge=1),
+    limit: int = Query(6, ge=1),
+    recipes_limit: int = Query(6, ge=1),
+    recipes_page: int = Query(1, ge=1),
+    user: User = PROTECTED,
+    session: AsyncSession = SESSION,
+) -> dict | JSONResponse:
     """
     Мои подписки.
     Возвращает пользователей, на которых подписан текущий пользователь.
@@ -68,100 +71,129 @@ async def subscriptions(
     """
     if not user:
         return NOT_AUTHENTICATED
-    results = await db_follow.is_subscribed_all(user.id, page, limit)
-    if results:
-        results = [dict(i) for i in results]
-        for user_dict in results:
-            recipes = await db_recipe.check_recipe_by_id_author(
-                request, author_id=user_dict["id"], limit=recipes_limit)
-            user_dict["recipes"] = recipes
-            user_dict["recipes_count"] = len(recipes)
-        count = await db_follow.count_is_subscribed(user.id)
-        return await query_list(results, request, count, page, limit)
+    result = await FollowDB.is_subscribed_all(session, user.id, page, limit)
+    if result:
+        result_dict = [dict(i) for i in result]
+
+        for user_dict in result_dict:
+            recipes = await RecipeDB.check_recipe_by_id_author(
+                session, request, author_id=user_dict["id"], limit=recipes_limit, page=recipes_page
+            )
+            if recipes:
+                user_dict["recipes"] = recipes
+                user_dict["recipes_count"] = len(recipes)
+
+        count = await FollowDB.count_is_subscribed(session, user.id)
+        return await query_list(result_dict, request, count, page, limit)
     return NOT_FOUND
 
 
-@router.post("/set_password/")
-@router.post("/{pk}/set_password/")
+@router.post("/set_password/", response_model=UserOut, status_code=status.HTTP_200_OK)
+@router.post("/{pk}/set_password/", response_model=UserOut, status_code=status.HTTP_200_OK)
 async def set_password(
-    user_pas: SetPassword, pk: int = None, user: User = PROTECTED
-):
+    user_pas: SetPassword,
+    pk: int | None = None,
+    user: User = PROTECTED,
+    session: AsyncSession = SESSION,
+) -> UserOut | JSONResponse:
     """
     Изменение пароля пользователя.
     Администратор может изменять пароль любого пользователя.
     """
     if not user:
         return NOT_AUTHENTICATED
-    if user.is_staff:
-        password_hashed = await get_hashed_password(user_pas.new_password)
-        return await db_user.update_user(password_hashed, pk)
+
+    password_hashed = await get_hashed_password(user_pas.new_password)
+
+    if user.is_staff and pk:
+        if user_other := await UserDB.update(session, password_hashed, pk):
+            return user_other
+        return JSONResponse(
+            {"detail": "An error has occurred"}, status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
     if not await verify_password(user_pas.current_password, user.password):
         return JSONResponse(
             {"detail": "Incorrect password"}, status.HTTP_400_BAD_REQUEST
         )
-    password_hashed = await get_hashed_password(user_pas.new_password)
-    return await db_user.update_user(password_hashed, user.id)
+    if user_my := await UserDB.update(session, password_hashed, user.id):
+        return user_my
+    return JSONResponse(
+        {"detail": "An error has occurred"}, status.HTTP_500_INTERNAL_SERVER_ERROR
+    )
 
 
-@router.post("/{pk}/")
-async def user_active(pk: str, is_active: IsActive, user: User = PROTECTED):
+@router.post("/{pk}/", response_model=UserOut, status_code=status.HTTP_200_OK)
+async def user_active(
+    pk: int,
+    is_active: bool = Query(False),
+    user: User = PROTECTED,
+    session: AsyncSession = SESSION,
+) -> UserOut | JSONResponse:
     """ Блокировать аккаунты пользователей может только администратор. """
     if not user:
         return NOT_AUTHENTICATED
     if user.is_staff:
-        await db_user.user_active(pk, is_active)
-        return db_user.get_user_full_by_id(pk)
-    return Response(status_code=status.HTTP_403_FORBIDDEN)
+        return await UserDB.user_active(session, pk, is_active)
+    return JSONResponse("No access", status_code=status.HTTP_403_FORBIDDEN)
 
 
-@router.delete("/{pk}/")
-async def user_delete(pk: str, user: User = PROTECTED):
+@router.delete("/{pk}/", status_code=status.HTTP_204_NO_CONTENT)
+async def user_delete(pk: str, user: User = PROTECTED, session: AsyncSession = SESSION) -> JSONResponse:
     """ Удалять аккаунты пользователей может только администратор. """
     if not user:
         return NOT_AUTHENTICATED
     if user and user.is_staff:
-        await db_user.delete(pk)
-    return Response(status_code=status.HTTP_403_FORBIDDEN)
+        await UserDB.delete(session, pk)
+    return JSONResponse({"detail": "Deleted"}, status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{pk}/", response_model=UserSchemas)
-async def user_id(pk: int, user: User = PROTECTED):
+@router.get("/{pk}/", response_model=UserOut, status_code=status.HTTP_200_OK)
+async def user_id(pk: int, user: User = PROTECTED, session: AsyncSession = SESSION) -> UserOut | JSONResponse:
     """Профиль пользователя. Доступно всем пользователям."""
     if user:
-        user = await db_user.get_user_full_by_id_auth(pk, user.id)
+        result = await UserDB.user_by_id_auth(session, pk, user.id)
     else:
-        user = await db_user.get_user_full_by_id(pk)
-    return user or NOT_FOUND
+        result = await UserDB.user_by_id(session, pk)
+    return result or NOT_FOUND
 
 
 @router.post("/{pk}/subscribe/", response_model=SFollow)
-@router.delete("/{pk}/subscribe/")
-async def subscribe(request: Request, pk: int, user: User = PROTECTED):
+@router.delete("/{pk}/subscribe/", status_code=status.HTTP_204_NO_CONTENT)
+async def subscribe(
+    request: Request,
+    pk: int,
+    user: User = PROTECTED,
+    session: AsyncSession = SESSION,
+) -> Any:
     """ Подписка на пользователя. """
     if not user:
         return NOT_AUTHENTICATED
-    if request.method == "DELETE":
-        if await db_follow.delete(user.id, pk):
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
-        return Response(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
-    autor_dict = await db_user.get_user_full_by_id(pk)
-    if not autor_dict:
-        return NOT_FOUND
     if pk == user.id:
         return JSONResponse(
             {'errors': 'It is forbidden to unfollow or follow yourself.'},
             status.HTTP_400_BAD_REQUEST
         )
-    if await db_follow.is_subscribed(user.id, pk):
+
+    if request.method == "DELETE":
+        if await FollowDB.delete(session, user.id, pk):
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        return Response(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+    autor = await UserDB.user_by_id(session, pk)
+    if not autor:
+        return NOT_FOUND
+
+    if not await FollowDB.create(session, user.id, pk):
         return JSONResponse(
             {'errors': 'You are already subscribed to this author.'},
             status.HTTP_400_BAD_REQUEST
         )
-    await db_follow.create(user.id, pk)
-    autor_dict = dict(autor_dict)
+
+    autor_dict = dict(autor)
     autor_dict["is_subscribed"] = True
-    recipes = await db_recipe.check_recipe_by_id_author(request, author_id=pk)
-    autor_dict["recipes"] = recipes
-    autor_dict["recipes_count"] = len(recipes)
+    recipes = await RecipeDB.check_recipe_by_id_author(session, request, author_id=pk)
+    if recipes:
+        autor_dict["recipes"] = recipes
+        autor_dict["recipes_count"] = len(recipes)
     return autor_dict

@@ -1,17 +1,16 @@
 import os
 
-from starlette.requests import Request
-
 from settings import MEDIA_ROOT
+from starlette.requests import Request
 
 
 async def query_list(
-    query: list = [],
-    request: Request = None,
-    count: int | None = 0,
-    page: int | None = None,
-    limit: int | None = None
-):
+    query: list,
+    request: Request,
+    count: int = 0,
+    page: int = 1,
+    limit: int = 6,
+) -> dict:
     """
     Составляет json ответ для пользователя в соответствии с требованиями.
     Составляет следующую, предыдущую и количество страниц для пагинации.
@@ -32,7 +31,7 @@ async def query_list(
     }
 
 
-async def image_delete(filename=None, image_path=""):
+async def image_delete(filename: str = "", image_path: str = "") -> None:
     if not image_path:
         image_path = os.path.join(MEDIA_ROOT, filename)
     if os.path.isfile(image_path):

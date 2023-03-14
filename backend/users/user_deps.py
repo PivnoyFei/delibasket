@@ -1,9 +1,16 @@
 from typing import Optional
 
 from fastapi import HTTPException, status
+from fastapi.param_functions import Body
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from starlette.requests import Request
+
+
+class OAuth2PasswordRequestForm:
+    def __init__(self, email: str = Body(), password: str = Body()) -> None:
+        self.email = email
+        self.password = password
 
 
 class OAuth2PasswordToken(OAuth2PasswordBearer):

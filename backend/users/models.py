@@ -1,138 +1,151 @@
 import uuid
 from datetime import datetime, timedelta
+from typing import Any
 
-from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, String,
-                        Table, UniqueConstraint, and_, case, select)
+import sqlalchemy as sa
+from asyncpg import UniqueViolationError
+from db import Base
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
-
-from db import Base, metadata
-from users.schemas import Subscriptions, UserBase, UserCreate
+from users.schemas import Subscriptions, UserBase, UserCreate, UserOut
 
 
-def generate_uuid():
+def generate_uuid() -> str:
     return str(uuid.uuid4().hex)
 
 
-users = Table(
-    "users", metadata,
-    Column("id", Integer, primary_key=True),
-    Column("email", String(255), unique=True, index=True),
-    Column("password", String(255)),
-    Column("username", String(150), unique=True, index=True),
-    Column("first_name", String(150)),
-    Column("last_name", String(150)),
-    Column("timestamp", DateTime(timezone=True), default=func.now()),
-    Column("is_active", Boolean, default=True),
-    Column("is_staff", Boolean, default=False),
-    Column("is_superuser", Boolean, default=False)
-)
-follow = Table(
-    "follows", metadata,
-    Column("id", Integer, primary_key=True),
-    Column("user_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
-    Column("author_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
-    UniqueConstraint('user_id', 'author_id', name='unique_follow')
-)
-authtoken_token = Table(
-    "authtoken_token", metadata,
-    Column(
-        "key",
-        String,
-        primary_key=True,
-        default=generate_uuid(),
-        unique=True,
-        index=True,
-    ),
-    Column("created", DateTime),
-    Column("user_id", Integer, ForeignKey("users.id", ondelete='CASCADE')),
-)
+class User(Base):
+    __tablename__ = "users"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    email = sa.Column(sa.String(255), nullable=False, unique=True, index=True)
+    password = sa.Column(sa.String(255), nullable=False)
+    username = sa.Column(sa.String(150), nullable=False, unique=True, index=True)
+    first_name = sa.Column(sa.String(150), nullable=False)
+    last_name = sa.Column(sa.String(150), nullable=False)
+    timestamp = sa.Column(sa.DateTime(timezone=True), nullable=False, default=func.now())
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True)
+    is_staff = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_superuser = sa.Column(sa.Boolean, nullable=False, default=False)
 
 
-class Token(Base):
-    async def create_token(self, user_id: int):
-        return await self.database.execute(
-            authtoken_token.insert()
+class AuthToken(Base):
+    __tablename__ = "auth_token"
+    key = sa.Column(sa.String, primary_key=True, unique=True, index=True, default=generate_uuid())
+    created = sa.Column(sa.DateTime())
+    user_id = sa.Column(sa.Integer, sa.ForeignKey("users.id", ondelete='CASCADE'))
+
+
+class Follow(Base):
+    __tablename__ = "follows"
+
+    id = sa.Column(sa.Integer, primary_key=True, index=True)
+    user_id = sa.Column(sa.Integer, sa.ForeignKey("users.id", ondelete='CASCADE'))
+    author_id = sa.Column(sa.Integer, sa.ForeignKey("users.id", ondelete='CASCADE'))
+    __table_args__ = (
+        sa.UniqueConstraint('user_id', 'author_id'),
+    )
+
+
+class TokenDB:
+    async def create(session: AsyncSession, user_id: int) -> str:
+        query = await session.execute(
+            sa.insert(AuthToken)
             .values(
                 key=generate_uuid(),
                 created=datetime.now() + timedelta(weeks=2),
                 user_id=user_id
             )
-            .returning(authtoken_token.c.key)
+            .returning(AuthToken.key)
         )
+        await session.commit()
+        return query.scalar()
 
-    async def check_token(self, token):
+    async def check(session: AsyncSession, token: str) -> User:
         """ Возвращает информацию о владельце указанного токена. """
-        return await self.database.fetch_one(
-            authtoken_token.join(users).select().where(
-                and_(
-                    authtoken_token.c.key == token,
-                    authtoken_token.c.created > datetime.now()
+        query = await session.execute(
+            sa.select(User)
+            .join(AuthToken, AuthToken.user_id == User.id)
+            .where(
+                sa.and_(
+                    AuthToken.key == token,
+                    AuthToken.created > datetime.now()
                 )
             )
         )
+        return query.scalar()
 
-    async def delete_token(self, user_id: int):
+    async def delete(session: AsyncSession, user_id: int) -> None:
         """ Удаляет токен при выходе владельца. """
-        query = authtoken_token.delete().where(
-            authtoken_token.c.user_id == user_id)
-        await self.database.execute(query)
+        await session.execute(sa.delete(AuthToken).where(AuthToken.user_id == user_id))
+        await session.commit()
 
 
-class User(Base):
-    async def get_users(self, pk: int | None) -> list[UserBase]:
-        query = (
-            select([
-                users,
-                case(
-                    [(and_(follow.c.user_id == pk, pk != None), "True")],
+class UserDB:
+    async def get_users(session: AsyncSession, pk: int | None) -> list[UserBase]:
+        query = await session.execute(
+            sa.select([
+                User,
+                sa.case(
+                    [(sa.and_(Follow.user_id == pk, pk != None), "True")],
                     else_="False"
                 )
                 .label("is_subscribed")
             ])
-            .join(follow, users.c.id == follow.c.author_id, full=True)
-            .where(users.c.is_active == True)
-            .order_by(users.c.id)
+            .join(Follow, User.id == Follow.author_id, full=True)
+            .where(User.is_active == True)
+            .order_by(User.id)
         )
-        return await self.database.fetch_all(query)
+        return query.scalars().all()
 
-    async def get_user_by_email(self, email: str) -> int | None:
-        query = select(users.c.id).where(users.c.email == email)
-        return await self.database.fetch_one(query)
+    async def is_email(session: AsyncSession, email: str) -> int | None:
+        query = await session.execute(sa.select(User.id).where(User.email == email))
+        return query.scalar()
 
-    async def get_user_by_username(self, username: str) -> int | None:
-        query = select(users.c.id).where(users.c.username == username)
-        return await self.database.fetch_one(query)
+    async def is_username(session: AsyncSession, username: str) -> int | None:
+        query = await session.execute(sa.select(User.id).where(User.username == username))
+        return query.scalar()
 
-    async def get_user_password_id_by_email(self, email: str):
-        return await self.database.fetch_one(
-            select(users.c.id, users.c.password)
-            .where(users.c.email == email)
+    async def get_user_password_id_by_email(session: AsyncSession, email: str) -> Any:
+        query = await session.execute(
+            sa.select(User.id, User.password)
+            .where(User.email == email)
         )
+        return query.one()
 
-    async def get_user_full_by_id(self, pk: int):
-        return await self.database.fetch_one(
-            select([users]).where(users.c.id == pk))
+    async def user_by_id(session: AsyncSession, pk: int) -> UserOut:
+        query = await session.execute(
+            sa.select(
+                User.id,
+                User.email,
+                User.username,
+                User.first_name,
+                User.last_name,
+            ).where(User.id == pk)
+        )
+        return query.one()
 
-    async def get_user_full_by_id_auth(self, pk: int, user_id: int):
-        query = await self.database.fetch_one(
-            select(
-                users.c.id,
-                users.c.email,
-                users.c.username,
-                users.c.first_name,
-                users.c.last_name,
-                case([(and_(follow.c.user_id == user_id,
-                       follow.c.user_id != users.c.id),
-                       "True")], else_="False").label("is_subscribed")
+    async def user_by_id_auth(session: AsyncSession, pk: int, user_id: int) -> UserOut:
+        query = await session.execute(
+            sa.select(
+                User.id,
+                User.email,
+                User.username,
+                User.first_name,
+                User.last_name,
+                sa.case(
+                   [(sa.and_(Follow.user_id == user_id, Follow.user_id != User.id), "True")],
+                   else_="False"
+                ).label("is_subscribed")
             )
-            .join(follow, users.c.id == follow.c.author_id, full=True)
-            .where(users.c.id == pk)
+            .join(Follow, User.id == Follow.author_id, full=True)
+            .where(User.id == pk)
         )
-        return dict(query) if query else None
+        return query.one()
 
-    async def create(self, user: UserCreate, is_staff: bool = False) -> int:
-        return await self.database.execute(
-            users.insert().values(
+    async def create(session: AsyncSession, user: UserCreate, is_staff: bool | None = False) -> User:
+        query = await session.execute(
+            sa.insert(User).values(
                 email=user.email,
                 password=user.password,
                 username=user.username,
@@ -140,83 +153,125 @@ class User(Base):
                 last_name=user.last_name,
                 is_active=True,
                 is_staff=is_staff,
-                is_superuser=False
+                is_superuser=False,
+            ).returning(User)
+        )
+        await session.commit()
+        return query.one()
+
+    async def user_active(session: AsyncSession, pk_name: int | str, is_active: bool) -> UserOut:
+        query = (
+            sa.update(User)
+            .values(is_active=is_active)
+            .returning(
+                User.id,
+                User.email,
+                User.username,
+                User.first_name,
+                User.last_name,
             )
         )
 
-    async def user_active(self, pk: str, is_active: bool):
-        query = users.update().values(is_active=is_active)
-        if pk.isdigit():
-            query = query.where(users.c.id == int(pk))
+        if type(pk_name) == int:
+            query = query.where(User.id == pk_name)
         else:
-            query = query.where(users.c.name == pk)
-        await self.database.execute(query)
+            query = query.where(User.name == pk_name)
 
-    async def update_user(self, password: str, user_id: int):
-        await self.database.execute(
-            users.update()
-            .where(users.c.id == user_id)
-            .values(password=password)
-        )
+        query = await session.scalar(query)
+        await session.commit()
+        return query
 
-    async def delete(self, pk: str):
-        query = users.delete()
+    async def update(session: AsyncSession, password: str, user_id: int) -> UserOut | None:
+        try:
+            user = await session.execute(
+                sa.update(User)
+                .where(User.id == user_id)
+                .values(password=password)
+                .returning(
+                    User.id,
+                    User.email,
+                    User.username,
+                    User.first_name,
+                    User.last_name,
+                )
+            )
+            await session.commit()
+            return user.one()
+
+        except:
+            await session.rollback()
+            return None
+
+    async def delete(session: AsyncSession, pk: str) -> None:
+        query = sa.delete(User)
         if pk.isdigit():
-            query = query.where(users.c.id == int(pk))
+            query = query.where(User.id == int(pk))
         else:
-            query = query.where(users.c.name == pk)
-        await self.database.execute(query)
+            query = query.where(User.name == pk)
+        await session.execute(query)
+        await session.commit()
 
 
-class Follow(Base):
-    async def is_subscribed(self, user_id: int, author_id: int):
-        return await self.database.fetch_one(
-            select([follow])
+class FollowDB:
+    async def is_subscribed(session: AsyncSession, user_id: int, author_id: int) -> Any:
+        query = await session.execute(
+            sa.select(Follow)
             .where(
-                follow.c.user_id == user_id,
-                follow.c.author_id == author_id
+                Follow.user_id == user_id,
+                Follow.author_id == author_id
             )
         )
+        return query.fetchone()
 
-    async def count_is_subscribed(self, user_id: int) -> int:
-        query = await self.database.fetch_one(
-            select(func.count(users.c.id).label("is_count"))
-            .join_from(follow, users, users.c.id == follow.c.author_id)
-            .where(follow.c.user_id == user_id, users.c.is_active == True)
+    async def count_is_subscribed(session: AsyncSession, user_id: int) -> int:
+        count = await session.execute(
+            sa.select(func.count(User.id).label("is_count"))
+            .join_from(Follow, User, User.id == Follow.author_id)
+            .where(Follow.user_id == user_id, User.is_active == True)
         )
-        return query[0] if query else 0
+        return count.one()[0] if count else 0
 
     async def is_subscribed_all(
-        self,
+        session: AsyncSession,
         user_id: int,
-        page: int = None,
-        limit: int = None
+        page: int | None = None,
+        limit: int | None = None
     ) -> list[Subscriptions]:
         query = (
-            select(
-                users.c.id,
-                users.c.username,
-                users.c.first_name,
-                users.c.last_name,
-                case([(follow.c.user_id == user_id, 'True')], else_='False')
+            sa.select(
+                User.id,
+                User.username,
+                User.first_name,
+                User.last_name,
+                sa.case([(Follow.user_id == user_id, 'True')], else_='False')
                 .label("is_subscribed")
             )
-            .join_from(follow, users, users.c.id == follow.c.author_id)
-            .where(follow.c.user_id == user_id, users.c.is_active == True)
+            .join_from(Follow, User, User.id == Follow.author_id)
+            .where(Follow.user_id == user_id, User.is_active == True)
         )
         if limit:
             query = query.limit(limit)
             if page:
                 query = query.offset((page - 1) * limit)
-        return await self.database.fetch_all(query)
+        query = await session.execute(query)
+        return query.all()
 
-    async def create(self, user_id: int, author_id: int) -> int:
-        query = follow.insert().values(
-            user_id=user_id, author_id=author_id)
-        await self.database.execute(query)
+    async def create(session: AsyncSession, user_id: int, author_id: int) -> bool:
+        try:
+            query = await session.execute(
+                sa.insert(Follow)
+                .values(user_id=user_id, author_id=author_id)
+            )
+            await session.commit()
+            print(query.fetchone())
+            return True
+        except UniqueViolationError:
+            return False
 
-    async def delete(self, user_id: int, author_id: int) -> None:
-        await self.database.execute(follow.delete().where(
-            follow.c.user_id == user_id, follow.c.author_id == author_id)
+    async def delete(session: AsyncSession, user_id: int, author_id: int) -> bool | None:
+        await session.execute(
+            sa.delete(Follow)
+            .where(Follow.user_id == user_id, Follow.author_id == author_id)
         )
+        await session.commit()
         return True
