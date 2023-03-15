@@ -111,7 +111,7 @@ class UserDB:
             sa.select(User.id, User.password)
             .where(User.email == email)
         )
-        return query.one()
+        return query.all()
 
     async def user_by_id(session: AsyncSession, pk: int) -> UserOut:
         query = await session.execute(

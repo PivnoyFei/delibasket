@@ -21,12 +21,12 @@ async def login(user: OAuth2 = Depends(), session: AsyncSession = SESSION) -> JS
         return JSONResponse(
             {"detail": "Incorrect email"}, status.HTTP_400_BAD_REQUEST
         )
-    if not await verify_password(user.password, user_dict.password):
+    if not await verify_password(user.password, user_dict[0].password):
         return JSONResponse(
             {"detail": "Incorrect password"}, status.HTTP_400_BAD_REQUEST
         )
     return JSONResponse(
-        {"auth_token": await TokenDB.create(session, user_dict.id)},
+        {"auth_token": await TokenDB.create(session, user_dict[0].id)},
         status.HTTP_200_OK
     )
 

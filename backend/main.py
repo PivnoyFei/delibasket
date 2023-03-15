@@ -11,7 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
 from users import api_auth, api_user
 
-app = FastAPI(title="FOODGRAM")
+app = FastAPI(title="DELIBASKET")
 app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 

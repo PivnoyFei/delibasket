@@ -2,20 +2,22 @@ version: '3.7'
 
 services:
   db:
+    container_name: ${POSTGRES_SERVER}
     image: postgres:13.0-alpine
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    command: -p ${POSTGRES_PORT}
+    expose:
+      - ${POSTGRES_PORT}
     env_file:
       - ./.env
-    ports:
-      - 5432:5432
 
   backend:
+    container_name: backend
     build:
       context: ../backend
       dockerfile: Dockerfile
-    #command: uvicorn main:app --reload --host 0.0.0.0
     restart: always
     volumes:
       - ../backend/:/backend
@@ -23,7 +25,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - 0:8000
+      - 9999:8000
     depends_on:
       - db
 
