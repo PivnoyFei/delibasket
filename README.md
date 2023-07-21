@@ -97,8 +97,8 @@ docker-compose up -d --build
 
 #### Миграции базы данных (не обязательно):
 ```bash
-docker-compose exec backend alembic revision --message="Initial" --autogenerate
-docker-compose exec backend alembic upgrade head
+docker-compose exec delibasket-backend alembic revision --message="Initial" --autogenerate
+docker-compose exec delibasket-backend alembic upgrade head
 ```
 
 #### Останавливаем контейнеры:
@@ -108,12 +108,12 @@ docker-compose down -v
 
 #### Создание суперпользователя:
 ```bash
-docker-compose exec backend python commands/createsuperuser.py
+docker-compose exec delibasket-backend python application/commands/createsuperuser.py
 ```
 
 #### Загрузка ингредиентов и тегов в бд после запуска контейнера, выберите то что нужно без `<>`, по умолчанию попробует загрузить оба файла:
 ```bash
-docker-compose exec backend python commands/load_json.py <ingredients.json / tags.json>
+docker-compose exec delibasket-backend python application/commands/load_json.py <ingredients.json / tags.json>
 ```
 
 #### Автор

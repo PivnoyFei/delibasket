@@ -1,0 +1,88 @@
+from fastapi import HTTPException, status
+from pydantic import BaseModel, EmailStr, Field, root_validator
+
+
+class UserRegistration(BaseModel):
+    email: EmailStr = Field(
+        ...,
+    )
+    username: str = Field(..., min_length=5, max_length=150)
+    first_name: str = Field(..., max_length=255)
+    last_name: str = Field(..., max_length=255)
+
+
+class UserCreate(UserRegistration):
+    password: str = Field(..., min_length=5, max_length=255)
+
+
+class UserAuth(BaseModel):
+    email: EmailStr = Field(
+        ...,
+    )
+    password: str = Field(
+        ...,
+    )
+
+
+class TokenBase(BaseModel):
+    auth_token: str = Field(...)
+
+
+class UserOut(BaseModel):
+    id: int
+    email: EmailStr
+    username: str
+    first_name: str
+    last_name: str
+    is_subscribed: bool | None = False
+
+    class Config:
+        orm_mode = True
+
+
+class UserBase(BaseModel):
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+    is_subscribed: bool = False
+
+    class Config:
+        orm_mode = True
+
+
+class Body(BaseModel):
+    count: int
+    next: str | None = None
+    previous: str | None = None
+
+
+class ListUsers(Body):
+    results: list[UserOut] | list = []
+
+
+class SFavorite(BaseModel):
+    id: int
+    name: str
+    image: str
+    cooking_time: int
+
+
+class SFollow(UserBase):
+    recipes: list[SFavorite] = []
+    recipes_count: int = 0
+
+
+class Subscriptions(Body):
+    results: list[SFollow] = []
+
+
+class SetPassword(BaseModel):
+    current_password: str = Field(..., description="old password")
+    new_password: str = Field(..., description="New Password")
+
+    @root_validator()
+    def validator(cls, value: dict) -> dict:
+        if value["current_password"] == value["new_password"]:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Incorrect password")
+        return value

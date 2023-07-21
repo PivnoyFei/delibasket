@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "delibasket"
+version = "0.1.0"
+description = "Электронная продуктовая корзина"
+authors = ["Смелов Илья <https://github.com/PivnoyFei>"]
+license = "LICENSE"
+
+[tool.poetry.dependencies]
+python = "3.11"
+aiofiles = "^23.1.0"
+alembic = "^1.10.2"
+asyncpg = "^0.27.0"
+bcrypt = "^4.0.1"
+fastapi = "^0.96.0"
+gunicorn = "^20.1.0"
+passlib = "^1.7.4"
+psycopg2-binary = "^2.9.6"
+pydantic = {extras = ["email"], version = "^1.10.6"}
+python-dotenv = "^1.0.0"
+python-multipart = "^0.0.6"
+sqlalchemy = "^2.0.15"
+types-aiofiles = "^23.1.0.0"
+uvicorn = "^0.22.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+isort = "^5.12.0"
+pytest = "^7.4.0"
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = [".dockerignore", "alembic"]
+extend_skip = ["_version.py", "versioneer.py", "__init__.py"]
+extend_skip_glob = ["docs/*", "*venv*/*"]
+
+[tool.black]
+line-length = 100
+target_version = ['py311']
+skip-string-normalization = true
+extend-exclude = '(.*\/_version.py|.*venv.*\/|.*alembic.*\/.*)'
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

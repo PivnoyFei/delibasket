@@ -1,12 +1,15 @@
-FROM python:3.10.7-slim
+FROM python:3.11.0-slim
 
-WORKDIR /backend
+WORKDIR /srv/www/app
 
 COPY . .
 
-RUN apt-get update && apt-get install gcc libpq-dev -y
-RUN python3 -m pip install --upgrade pip
-RUN pip install -r requirements.txt
+COPY pyproject.toml poetry.lock ./
+COPY . ./
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir poetry \
+    && poetry config virtualenvs.create false \
+    && poetry install -n --no-interaction --no-ansi --no-dev
 
-CMD gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000
-# CMD ["uvicorn", "main:app", "--reload", "--host", "0.0.0.0"]
+# CMD gunicorn application.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000
+# CMD ["uvicorn", "application.main:app", "--reload", "--host", "0.0.0.0"]

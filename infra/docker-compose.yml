@@ -1,8 +1,8 @@
 version: '3.7'
 
 services:
-  db:
-    container_name: ${POSTGRES_SERVER}
+  delibasket-db:
+    container_name:  ${POSTGRES_SERVER}
     image: postgres:13.0-alpine
     restart: always
     volumes:
@@ -13,28 +13,29 @@ services:
     env_file:
       - ./.env
 
-  backend:
-    container_name: backend
+  delibasket-backend:
+    container_name: delibasket-backend
     build:
       context: ../backend
       dockerfile: Dockerfile
+    command: gunicorn application.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000
     restart: always
     volumes:
-      - ../backend/:/backend
-      - media_value:/backend/media
+      - media_value:/srv/www/app/media
     env_file:
       - ./.env
     ports:
-      - 9999:8000
+      - 9988:8000
     depends_on:
-      - db
+      - delibasket-db
 
-  frontend:
-    image: kekkisama/frontend:latest
+  delibasket-frontend:
+    container_name: delibasket-frontend
+    image: ${DOCKERHUB_USERNAME}/frontend:latest
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
-      - db
+      - delibasket-db
 
   nginx:
     image: nginx:1.21.3-alpine
@@ -46,8 +47,8 @@ services:
       - ../frontend/build:/usr/share/nginx/html/
       - media_value:/var/html/media/
     depends_on:
-      - backend
-      - frontend
+      - delibasket-backend
+      - delibasket-frontend
 
 volumes:
   media_value:
