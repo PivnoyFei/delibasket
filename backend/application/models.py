@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Column, DateTime, case, func
+from sqlalchemy.sql.expression import Label
 
 
 class TimeStampMixin:
@@ -8,7 +10,7 @@ class TimeStampMixin:
     updated_at = Column(DateTime, default=datetime.utcnow)
 
     @classmethod
-    def list_columns(cls, *args: str | None) -> list:
+    def list_columns(cls, *args: str) -> list[Any]:
         """
         Получить список всех или некоторых колонок таблицы.
 
@@ -18,6 +20,9 @@ class TimeStampMixin:
         """
         if args:
             for name in args:
+                if not isinstance(name, str):
+                    raise TypeError(f"атрибут {name} должен быть в формоте `str`")
+
                 if not hasattr(cls, name):
                     raise AttributeError(f"класс {cls.__name__} не имеет атрибута {name}")
 
@@ -26,7 +31,7 @@ class TimeStampMixin:
         return [getattr(cls, c.name) for c in cls.__table__.columns]
 
     @classmethod
-    def json_build_object(cls, *args: str | None):
+    def json_build_object(cls, *args: str) -> Label[Any]:
         """
         Получить объект в json, со всеми или некоторыми колоноками таблицы.
 
@@ -38,6 +43,9 @@ class TimeStampMixin:
         build = []
         if args:
             for name in args:
+                if not isinstance(name, str):
+                    raise TypeError(f"атрибут {name} должен быть в формоте `str`")
+
                 if attr := getattr(cls, name, None):
                     build.extend((name, attr))
                 else:
@@ -48,12 +56,15 @@ class TimeStampMixin:
                 build.extend((c.name, getattr(cls, c.name)))
 
         return case(
-            (cls.id != None, func.json_build_object(*build)),
+            (
+                cls.id != None,
+                func.json_build_object(*build),
+            ),
             else_=None,
         ).label(cls.__tablename__)
 
     @classmethod
-    def json_agg(cls, *args: str | None):
+    def json_agg(cls, *args: str) -> Label[Any]:
         """
         Получить список объектов в json, со всеми или некоторыми колоноками таблицы.
 

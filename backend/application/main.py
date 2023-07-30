@@ -1,14 +1,15 @@
 from os.path import isdir
-from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import Request
 
-from application.database import Base, engine
+from application.auth.permissions import AuthBackend
+from application.database import Base
 from application.exceptions import CustomException
 from application.routers import router
 from application.settings import MEDIA_ROOT, settings
@@ -27,14 +28,32 @@ def init_listeners(app_: FastAPI) -> None:
         )
 
 
+def on_auth_error(request: Request, exc: Exception) -> JSONResponse:
+    status_code, error_code, message = 401, None, str(exc)
+    if isinstance(exc, CustomException):
+        status_code = int(exc.code)
+        error_code = exc.error_code
+        message = exc.message
+
+    return JSONResponse(
+        status_code=status_code,
+        content={"error_code": error_code, "message": message},
+    )
+
+
 def make_middleware() -> list[Middleware]:
     middleware = [
         Middleware(
             CORSMiddleware,
-            allow_origins=["*"],  # settings.BACKEND_CORS_ORIGINS,
+            allow_origins=settings.BACKEND_CORS_ORIGINS,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
+        ),
+        Middleware(
+            AuthenticationMiddleware,
+            backend=AuthBackend(),
+            on_error=on_auth_error,
         ),
     ]
     return middleware

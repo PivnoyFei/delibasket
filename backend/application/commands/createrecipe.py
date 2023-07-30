@@ -7,13 +7,15 @@ import string
 import uuid
 
 import __init__
-import sqlalchemy as sa
+from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from application.database import Base
-from application.recipes.models import AmountIngredient, Recipe, RecipeTag
+from application.ingredients.models import AmountIngredient
+from application.recipes.models import Recipe
 from application.settings import settings
+from application.tags.models import recipe_tag
 
 
 async def async_main() -> None:
@@ -35,14 +37,14 @@ async def async_main() -> None:
                 "text": name,
                 "cooking_time": random.randint(1, 255),
             }
-            query = await session.execute(sa.insert(Recipe).values(recipe).returning(Recipe.id))
+            query = await session.execute(insert(Recipe).values(recipe).returning(Recipe.id))
             recipe_id = query.fetchone()[0]
 
             tags = [
                 {"recipe_id": recipe_id, "tag_id": tag_id}
                 for tag_id in range(1, random.randint(2, 4))
             ]
-            await session.execute(sa.insert(RecipeTag).values(tags))
+            await session.execute(insert(recipe_tag).values(tags))
 
             ingredients = []
             was = []
@@ -55,7 +57,7 @@ async def async_main() -> None:
                 if ingredient["ingredient_id"] not in was:
                     was.append(ingredient["ingredient_id"])
                     ingredients.append(ingredient)
-            await session.execute(sa.insert(AmountIngredient).values(ingredients))
+            await session.execute(insert(AmountIngredient).values(ingredients))
 
         await session.commit()
     await engine.dispose()

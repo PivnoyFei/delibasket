@@ -6,9 +6,15 @@ class CustomException(Exception):
     error_code = HTTPStatus.BAD_GATEWAY
     message = HTTPStatus.BAD_GATEWAY.description
 
-    def __init__(self, message=None):
+    def __init__(self, message: str | None = "") -> None:
         if message:
             self.message = message
+
+
+class ForbiddenException(CustomException):
+    code = HTTPStatus.FORBIDDEN
+    error_code = HTTPStatus.FORBIDDEN
+    message = HTTPStatus.FORBIDDEN.description
 
 
 class UnauthorizedException(CustomException):

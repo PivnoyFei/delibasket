@@ -6,4 +6,4 @@ services:
     command: uvicorn application.main:app --reload --host 0.0.0.0
     volumes:
       - ../backend:/srv/www/app/
-      - media_value:/srv/www/app/media
+      - media_value:/srv/www/app/application/media

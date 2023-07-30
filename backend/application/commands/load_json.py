@@ -4,19 +4,21 @@ import asyncio
 import json
 import os
 import sys
-from typing import Any
+from typing import Sequence, TypeVar
 
 import __init__
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from application.database import scoped_session
-from application.recipes.models import Ingredient, Tag
+from application.ingredients.models import Ingredient
 from application.settings import DATA_ROOT, settings
+from application.tags.models import Tag
+
+_TM = TypeVar('_TM')
 
 
-async def async_main(filename: str, model_db: Any) -> None:
+async def async_main(filename: str, model: Sequence[_TM]) -> None:
     engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, echo=False)
     async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
@@ -26,7 +28,7 @@ async def async_main(filename: str, model_db: Any) -> None:
                 items = dict((item["name"], item) for item in json.load(file)).values()
                 for item in items:
                     try:
-                        await session.execute(sa.insert(model_db).values(**item))
+                        await session.execute(sa.insert(model).values(**item))
                         await session.commit()
                     except:
                         await session.rollback()
@@ -47,6 +49,6 @@ if len(data_load) > 1:
     else:
         print(f'Файл {data} отсутствует в каталоге data')
 else:
-    for i in command_load.keys():
-        print('====', i)
-        asyncio.run(async_main(i, command_load[i]))
+    for k, v in command_load.items():
+        print(f'=== {k} ===')
+        asyncio.run(async_main(k, v))

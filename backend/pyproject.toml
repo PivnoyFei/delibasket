@@ -29,7 +29,7 @@ pytest = "^7.4.0"
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 100
 skip = [".dockerignore", "alembic"]
 extend_skip = ["_version.py", "versioneer.py", "__init__.py"]
 extend_skip_glob = ["docs/*", "*venv*/*"]

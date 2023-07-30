@@ -51,27 +51,13 @@
 git clone https://github.com/PivnoyFei/delibasket.git
 cd delibasket
 ```
-#### Создаем и активируем виртуальное окружение:
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-#### для Windows
-```bash
-python -m venv venv
-source venv/Scripts/activate
-```
-#### Обновиляем pip и ставим зависимости из requirements.txt:
-```bash
-python -m pip install --upgrade pip && pip install -r backend/requirements.txt
-```
 
 ### Перед запуском сервера, в папке infra необходимо создать .env файл со своими данными.
 ```bash
 POSTGRES_DB='postgres' # имя БД
 POSTGRES_USER='postgres' # логин для подключения к БД
 POSTGRES_PASSWORD='postgres' # пароль для подключения к БД
-POSTGRES_SERVER='db' # название контейнера
+POSTGRES_SERVER='delibasket-db' # название контейнера
 POSTGRES_PORT='5432' # порт для подключения к БД
 ```
 
@@ -80,22 +66,12 @@ POSTGRES_PORT='5432' # порт для подключения к БД
 cd infra
 ```
 
-### Быстрый запуск, из контейнеров запускаем только бд:
-```bash
-docker-compose up -d db
-```
-
-#### Открываем в консоли папку backend и запускаем сервер:
-```bash
-uvicorn main:app --reload --host 0.0.0.0
-```
-
 ### Запуск проекта
 ```bash
 docker-compose up -d --build
 ```
 
-#### Миграции базы данных (не обязательно):
+#### Миграции базы данных:
 ```bash
 docker-compose exec delibasket-backend alembic revision --message="Initial" --autogenerate
 docker-compose exec delibasket-backend alembic upgrade head

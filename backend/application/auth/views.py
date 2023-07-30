@@ -1,36 +1,34 @@
-from fastapi import APIRouter, Depends, status
-from fastapi.responses import JSONResponse
-from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
+from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse, Response
+from starlette.requests import Request
+from starlette.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST
 
 from application.auth.managers import AuthTokenManager
-from application.database import get_session
-from application.settings import NOT_AUTHENTICATED
-from application.users.managers import UserDB
-from application.users.models import User
-from application.users.schemas import TokenBase
-from application.users.user_deps import OAuth2PasswordRequestForm as OAuth2
-from application.users.utils import get_current_user
+from application.auth.permissions import IsAuthenticated, PermissionsDependency
+from application.auth.schemas import TokenBase, UserLogin
+from application.users.managers import UserManager
 
 router = APIRouter()
-PROTECTED = Depends(get_current_user)
-SESSION = Depends(get_session)
 
 
-@router.post("/login/", response_model=TokenBase, status_code=HTTP_200_OK)
-async def login(user_in: OAuth2 = Depends()) -> JSONResponse:
-    """Авторизация по емейлу и паролю, выдает токен."""
-    user: User = await UserDB.by_email(user_in.email)
+@router.post("/login/", response_model=TokenBase, status_code=HTTP_201_CREATED)
+async def login(user_in: UserLogin) -> JSONResponse:
+    """Получить токен авторизации.
+    Используется для авторизации по емейлу и паролю, чтобы далее использовать токен при запросах."""
+    user = await UserManager().by_email(user_in.email)
     if not user:
         return JSONResponse({"detail": "Неверный email"}, HTTP_400_BAD_REQUEST)
     if not await user.check_password(user_in.password):
         return JSONResponse({"detail": "Неверный пароль"}, HTTP_400_BAD_REQUEST)
-    return JSONResponse({"auth_token": await AuthTokenManager.create(user.id)}, HTTP_200_OK)
+    return JSONResponse({"auth_token": await AuthTokenManager().create(user.id)}, HTTP_201_CREATED)
 
 
-@router.post("/logout/", status_code=HTTP_404_NOT_FOUND)
-async def logout(user: User = PROTECTED) -> JSONResponse:
-    """Удаляет все токены пользователя."""
-    if not user:
-        return NOT_AUTHENTICATED
-    await AuthTokenManager.delete(user.id)
-    return JSONResponse({"detail": "OK"})
+@router.post(
+    "/logout/",
+    dependencies=[Depends(PermissionsDependency([IsAuthenticated]))],
+    status_code=HTTP_204_NO_CONTENT,
+)
+async def logout(request: Request) -> Response:
+    """Удаляет все токены текущего пользователя."""
+    if await AuthTokenManager().delete(request.user.id):
+        return Response(status_code=HTTP_204_NO_CONTENT)

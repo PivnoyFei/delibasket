@@ -2,7 +2,6 @@ import bcrypt
 from sqlalchemy import (
     Boolean,
     Column,
-    DateTime,
     ForeignKey,
     Integer,
     LargeBinary,
@@ -11,7 +10,6 @@ from sqlalchemy import (
     and_,
     case,
 )
-from sqlalchemy.sql import func
 
 from application.database import Base
 from application.models import TimeStampMixin
@@ -24,7 +22,6 @@ class User(Base, TimeStampMixin):
     username = Column(String(150), nullable=False, unique=True, index=True)
     first_name = Column(String(150), nullable=False)
     last_name = Column(String(150), nullable=False)
-    timestamp = Column(DateTime(timezone=True), nullable=False, default=func.now())
 
     is_active = Column(Boolean, nullable=False, default=True)
     is_staff = Column(Boolean, nullable=False, default=False)
@@ -38,17 +35,27 @@ class User(Base, TimeStampMixin):
         return bcrypt.checkpw(password.encode("utf-8"), self.password)
 
 
-class Follow(Base):
+class Follow(Base, TimeStampMixin):
     __table_args__ = (UniqueConstraint('user_id', 'author_id'),)
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("user.id", ondelete='CASCADE'))
-    author_id = Column(Integer, ForeignKey("user.id", ondelete='CASCADE'))
 
-    async def is_subscribed(cls, pk):
+    author_id = Column(Integer, ForeignKey("user.id", ondelete='CASCADE'))  # Подписались
+    user_id = Column(Integer, ForeignKey("user.id", ondelete='CASCADE'))  # Подписался
+
+    @classmethod
+    def is_subscribed(cls, pk: int, user_id: int | None = None):
+        if user_id:
+            return case(
+                (
+                    and_(cls.user_id == user_id, cls.user_id != User.id),
+                    "True",
+                ),
+                else_="False",
+            ).label("is_subscribed")
         return case(
             (
-                and_(pk != None, Follow.user_id == pk),
+                and_(pk != None, cls.user_id == pk, cls.user_id != User.id),
                 "True",
             ),
             else_="False",
