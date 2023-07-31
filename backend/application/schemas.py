@@ -1,4 +1,4 @@
-from typing import Generic, Sequence, TypeVar
+from typing import Any, Generic, Sequence, TypeVar
 
 from fastapi import Query
 from pydantic import AnyUrl, BaseModel, Field
@@ -6,6 +6,7 @@ from pydantic.dataclasses import dataclass
 from pydantic.generics import GenericModel
 from sqlalchemy import Select, select
 from sqlalchemy.sql import func
+from starlette.datastructures import URL
 
 from application.recipes.models import Recipe
 from application.settings import PAGINATION_SIZE
@@ -41,6 +42,14 @@ class Params(BaseModel):
         le=1000,
         description="Количество объектов на странице.",
     )
+
+    @property
+    def has_previous(self) -> bool:
+        return self.page > 1
+
+    def has_next(self, count: int) -> bool:
+        next_page = (self.page + 1) * self.limit
+        return next_page <= count or next_page - count < self.limit
 
     async def search(self) -> Select:
         raise NotImplementedError("Метод должен быть переопределен.")
@@ -131,3 +140,19 @@ class Result(GenericModel, Generic[_TS]):
     next: AnyUrl = Field(None, description="Ссылка на следующую страницу.")
     previous: AnyUrl = Field(None, description="Ссылка на предыдущую страницу.")
     results: list[_TS] | None = Field([], description="Список объектов текущей страницы.")
+
+    @staticmethod
+    async def result(url: URL, count: int, params: Params, results: list) -> dict[str, Any]:
+        """Составляет json ответ для пользователя в соответствии с требованиями.
+        Составляет следующую, предыдущую и количество страниц для пагинации."""
+        page = params.page
+        return {
+            "count": count,
+            "next": (
+                str(url.replace_query_params(page=page + 1)) if params.has_next(count) else None
+            ),
+            "previous": (
+                str(url.replace_query_params(page=page - 1)) if params.has_previous else None
+            ),
+            "results": results,
+        }

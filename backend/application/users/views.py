@@ -6,7 +6,6 @@ from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT
 from application.auth.permissions import IsAdmin, IsAuthenticated, PermissionsDependency
 from application.exceptions import BadRequestException, NotFoundException
 from application.schemas import Result, SearchUser, SubscriptionsParams
-from application.services import get_result
 from application.users.managers import FollowManager, UserManager
 from application.users.schemas import FollowOut, SetPassword, UserCreate, UserOut
 
@@ -17,7 +16,7 @@ router = APIRouter()
 async def users(request: Request, params: SearchUser = Depends()) -> dict:
     """Список пользователей."""
     count, results = await UserManager().get_all(params, request.user.id)
-    return await get_result(request, count, params, results)
+    return await Result.result(request.url, count, params, results)
 
 
 @router.post(
@@ -59,7 +58,7 @@ async def subscriptions(request: Request, params: SubscriptionsParams = Depends(
     В выдачу добавляются рецепты.
     """
     count, results = await FollowManager().is_subscribed_all(request, params)
-    return await get_result(request, count, params, results)
+    return await Result.result(request.url, count, params, results)
 
 
 @router.post(

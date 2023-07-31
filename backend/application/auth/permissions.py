@@ -21,7 +21,7 @@ class AuthBackend(AuthenticationBackend):
 
     async def authenticate(self, conn: HTTPConnection) -> tuple[bool, Optional[User]]:
         current_user = CurrentUser()
-        authorization: str = conn.headers.get("Authorization")
+        authorization: str = conn.headers.get("Authorization", None)
         if authorization:
             scheme, credentials = authorization.split(" ")
             if scheme.lower() == "token":

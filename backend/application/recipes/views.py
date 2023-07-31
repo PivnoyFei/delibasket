@@ -17,7 +17,7 @@ from application.recipes.models import Cart, Favorite, Recipe
 from application.recipes.schemas import CreateRecipe, RecipeOut, UpdateRecipe
 from application.recipes.utils import base64_image
 from application.schemas import QueryParams, Result, SearchRecipe
-from application.services import get_result, image_delete
+from application.services import image_delete
 from application.settings import FILES_ROOT
 
 router = APIRouter()
@@ -71,7 +71,7 @@ async def get_recipes(
     params.is_in_shopping_cart = False if params.is_in_shopping_cart and user_id else True
 
     count, result = await RecipeManager().get_all(request, params, tags_in)
-    return await get_result(request, count, params, result)
+    return await Result.result(request.url, count, params, result)
 
 
 @router.get(
