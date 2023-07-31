@@ -62,12 +62,7 @@ class UserManager:
     async def create(self, user_in: UserCreate) -> User:
         async with scoped_session() as session:
             query = await session.execute(
-                insert(User)
-                .values(
-                    password=bytes(user_in.password, "utf-8"),
-                    **user_in.dict(exclude={"password"}),
-                )
-                .returning(User)
+                insert(User).values(**user_in.model_dump()).returning(User)
             )
             await session.commit()
             return query.scalar()

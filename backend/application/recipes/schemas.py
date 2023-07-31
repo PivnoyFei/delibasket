@@ -100,20 +100,6 @@ class UpdateRecipe(BaseRecipe):
         return result
 
 
-class RecipeField(BaseModel):
-    id: int
-    name: str
-    image: str
-    author: int
-    text: str
-    cooking_time: int
-    is_favorited: bool
-    is_in_shopping_cart: bool
-
-    class Config:
-        orm_mode = True
-
-
 class RecipeOut(BaseSchema):
     name: str
     image: str

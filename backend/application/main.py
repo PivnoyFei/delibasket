@@ -1,5 +1,6 @@
 from os.path import isdir
 
+from debug_toolbar.middleware import DebugToolbarMiddleware
 from fastapi import FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,12 +56,17 @@ def make_middleware() -> list[Middleware]:
             backend=AuthBackend(),
             on_error=on_auth_error,
         ),
+        Middleware(
+            DebugToolbarMiddleware,
+            panels=["debug_toolbar.panels.sqlalchemy.SQLAlchemyPanel"],
+        ),
     ]
     return middleware
 
 
 def create_app() -> FastAPI:
     app_ = FastAPI(
+        debug=False,
         title="DELIBASKET",
         description=None,
         version="1.0.1",

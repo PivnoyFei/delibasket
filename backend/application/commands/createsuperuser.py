@@ -24,11 +24,11 @@ class EmailField(BaseModel):
 
 
 class NameField(BaseModel):
-    name: constr(regex=name_str, max_length=128) = Field(min_length=1)
+    name: constr(pattern=name_str, max_length=128) = Field(min_length=1)
 
 
 class NameEnField(BaseModel):
-    username: constr(regex=name_en_str, max_length=128) = Field(min_length=1)
+    username: constr(pattern=name_en_str, max_length=128) = Field(min_length=1)
 
 
 class Createsuperuser:

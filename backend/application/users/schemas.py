@@ -1,31 +1,30 @@
-from typing import Any
+from pydantic import BaseModel, EmailStr, Field, constr, field_validator, model_validator
 
-from fastapi import HTTPException, status
-from pydantic import BaseModel, EmailStr, Field, constr, root_validator, validator
-
-from application.schemas import BaseSchema, name_str
+from application.exceptions import BadRequestException
+from application.schemas import BaseSchema, name_en_str, name_str
 from application.utils import hash_password
 
 
 class UserRegistration(BaseModel):
     email: EmailStr
-    username: str = Field(min_length=5, max_length=128)
-    first_name: str = Field(max_length=255)
-    last_name: str = Field(max_length=255)
+    username: str
+    first_name: str
+    last_name: str
 
 
 class UserCreate(BaseModel):
-    username: str = Field(min_length=5, max_length=150)
-    first_name: constr(regex=name_str, max_length=150) = Field(min_length=1)
-    last_name: constr(regex=name_str, max_length=150) = Field(min_length=1)
+    username: constr(pattern=name_en_str, min_length=1, max_length=150)
+    first_name: constr(pattern=name_str, min_length=1, max_length=150)
+    last_name: constr(pattern=name_str, min_length=1, max_length=150)
     email: EmailStr
-    password: str = Field(min_length=7, max_length=256)
+    password: str | bytes = Field(min_length=7)
 
     class Config:
-        anystr_strip_whitespace = True
+        str_strip_whitespace = True
 
-    @validator("password", pre=True)
-    def hash(cls, v: Any) -> bytes:
+    @field_validator("password")
+    @classmethod
+    def hash(cls, v: str) -> bytes:
         return hash_password(v)
 
 
@@ -72,9 +71,9 @@ class SetPassword(BaseModel):
     current_password: str = Field(description="old password")
     new_password: str = Field(description="New Password")
 
-    @root_validator()
-    def validator(cls, value: dict) -> dict:
-        if value["current_password"] == value["new_password"]:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Incorrect password")
-        value["new_password"] = hash_password(value["new_password"])
-        return value
+    @model_validator(mode='after')
+    def validator(self) -> "SetPassword":
+        if self.current_password == self.new_password:
+            raise BadRequestException("Incorrect password")
+        self.new_password = hash_password(self.new_password)
+        return self

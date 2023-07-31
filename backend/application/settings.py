@@ -2,10 +2,8 @@ import os
 from datetime import timedelta
 from typing import Any
 
-from dotenv import load_dotenv
-from pydantic import AnyHttpUrl, BaseSettings, PostgresDsn, root_validator, validator
-
-load_dotenv()
+from pydantic import AnyHttpUrl, PostgresDsn, model_validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -16,28 +14,26 @@ class Settings(BaseSettings):
     POSTGRES_NAME: str | None = "postgres"
     POSTGRES_USER: str | None = "postgres"
     POSTGRES_PASSWORD: str | None = "postgres"
-    POSTGRES_SERVER: str | None = "localhost"
+    POSTGRES_SERVER: str | None = "delibasket-db"
     POSTGRES_PORT: int | None = 5432
-    SQLALCHEMY_DATABASE_URI: PostgresDsn | None = None
 
     TESTING: bool | None = None
 
-    @root_validator(pre=True)
-    def testing_db_connection(cls, value: dict[str, Any]) -> dict:
-        if value.get("TESTING", None):
-            value["POSTGRES_SERVER"] = "db-test"
-        return value
+    @model_validator(mode='before')
+    @classmethod
+    def testing_db_connection(cls, data: dict[str, Any]) -> dict:
+        if data.get("TESTING", None):
+            data["POSTGRES_SERVER"] = "db-test"
+        return data
 
-    @validator("SQLALCHEMY_DATABASE_URI", pre=True)
-    def assemble_db_connection(cls, v: str | None, values: dict[str, Any]) -> Any:
-        if isinstance(v, str):
-            return v
-        return PostgresDsn.build(
-            scheme="postgresql+asyncpg",
-            user=values.get("POSTGRES_USER"),
-            password=values.get("POSTGRES_PASSWORD"),
-            host=values.get("POSTGRES_SERVER"),
-            path=f"/{values.get('POSTGRES_DB') or ''}",
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:"
+            f"{self.POSTGRES_PASSWORD}@"
+            f"{self.POSTGRES_SERVER}:"
+            f"{self.POSTGRES_PORT}/"
+            f"{self.POSTGRES_NAME or ''}"
         )
 
 

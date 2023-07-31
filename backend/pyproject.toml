@@ -1,26 +1,28 @@
 [tool.poetry]
 name = "delibasket"
-version = "0.1.0"
+version = "0.2.0"
 description = "Электронная продуктовая корзина"
 authors = ["Смелов Илья <https://github.com/PivnoyFei>"]
 license = "LICENSE"
 
 [tool.poetry.dependencies]
 python = "3.11"
-aiofiles = "^23.1.0"
-alembic = "^1.10.2"
-asyncpg = "^0.27.0"
+aiofiles = "^23.1"
+alembic = "^1.10"
+asyncpg = "^0.27"
 bcrypt = "^4.0.1"
-fastapi = "^0.96.0"
-gunicorn = "^20.1.0"
+fastapi = "^0.100"
+fastapi-debug-toolbar = "^0.5.0"
+gunicorn = "^20.1"
 passlib = "^1.7.4"
-psycopg2-binary = "^2.9.6"
-pydantic = {extras = ["email"], version = "^1.10.6"}
+psycopg2-binary = "^2.9"
+pydantic = {extras = ["email"], version = "^2.1.1"}
+pydantic-settings = "^2.0"
 python-dotenv = "^1.0.0"
-python-multipart = "^0.0.6"
+python-multipart = "^0.0"
 sqlalchemy = "^2.0.15"
-types-aiofiles = "^23.1.0.0"
-uvicorn = "^0.22.0"
+types-aiofiles = "^23.1.0"
+uvicorn = "^0.22"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

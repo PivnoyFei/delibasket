@@ -2,7 +2,6 @@ from typing import Any, Generic, Sequence, TypeVar
 
 from fastapi import Query
 from pydantic import AnyUrl, BaseModel, Field
-from pydantic.generics import GenericModel
 from sqlalchemy import Select, select
 from sqlalchemy.sql import func
 from starlette.datastructures import URL
@@ -22,7 +21,7 @@ class BaseSchema(BaseModel):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Params(BaseModel):
@@ -79,7 +78,7 @@ class SubscriptionsParams(Params):
 
 
 class SearchName(Params):
-    name: str = Query(
+    name: str | None = Query(
         None,
         max_length=128,
         description="Поиск по частичному вхождению в начале названия ингредиента.",
@@ -94,8 +93,12 @@ class SearchName(Params):
 
 
 class SearchUser(Params):
-    first_name: str = Query(None, regex=name_str, max_length=256, description="Поиск по имени")
-    last_name: str = Query(None, regex=name_str, max_length=256, description="Поиск по фамилии")
+    first_name: str | None = Query(
+        None, regex=name_str, max_length=256, description="Поиск по имени"
+    )
+    last_name: str | None = Query(
+        None, regex=name_str, max_length=256, description="Поиск по фамилии"
+    )
 
     async def search(self, query: Select) -> Select:
         for attr_name in ("last_name", "first_name"):
@@ -106,16 +109,16 @@ class SearchUser(Params):
 
 
 class IsFavoritedCartRecipeMixin(BaseModel):
-    is_favorited: int = Query(
-        None, description="Показывать только рецепты, находящиеся в списке избранного."
+    is_favorited: bool = Query(
+        False, description="Показывать только рецепты, находящиеся в списке избранного."
     )
-    is_in_shopping_cart: int = Query(
-        None, description="Показывать только рецепты, находящиеся в списке покупок."
+    is_in_shopping_cart: bool = Query(
+        False, description="Показывать только рецепты, находящиеся в списке покупок."
     )
 
 
 class SearchRecipe(Params, IsFavoritedCartRecipeMixin):
-    author: int = Query(None, description="Показывать рецепты только автора с указанным id.")
+    author: int = Query(0, description="Показывать рецепты только автора с указанным id.")
     tags: list[str] = Field(
         Query([], description="Показывать рецепты только с указанными тегами (по slug)")
     )
@@ -129,11 +132,11 @@ class SearchRecipe(Params, IsFavoritedCartRecipeMixin):
         return count, query
 
 
-class Result(GenericModel, Generic[_TS]):
+class Result(BaseModel, Generic[_TS]):
     count: int = Field(0, description="Общее количество объектов в базе.")
-    next: AnyUrl = Field(None, description="Ссылка на следующую страницу.")
-    previous: AnyUrl = Field(None, description="Ссылка на предыдущую страницу.")
-    results: list[_TS] | None = Field([], description="Список объектов текущей страницы.")
+    next: AnyUrl | None = Field(None, description="Ссылка на следующую страницу.")
+    previous: AnyUrl | None = Field(None, description="Ссылка на предыдущую страницу.")
+    results: list[_TS] = Field([], description="Список объектов текущей страницы.")
 
     @staticmethod
     async def result(url: URL, count: int, params: Params, results: list) -> dict[str, Any]:
