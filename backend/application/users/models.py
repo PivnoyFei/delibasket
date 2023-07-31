@@ -10,6 +10,7 @@ from sqlalchemy import (
     and_,
     case,
 )
+from sqlalchemy.sql.expression import Label
 
 from application.database import Base
 from application.models import TimeStampMixin
@@ -44,7 +45,7 @@ class Follow(Base, TimeStampMixin):
     user_id = Column(Integer, ForeignKey("user.id", ondelete='CASCADE'))  # Подписался
 
     @classmethod
-    def is_subscribed(cls, pk: int, user_id: int | None = None):
+    def is_subscribed(cls, pk: int | None = None, user_id: int | None = None) -> Label:
         if user_id:
             return case(
                 (

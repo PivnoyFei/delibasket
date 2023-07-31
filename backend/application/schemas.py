@@ -117,7 +117,7 @@ class IsFavoritedCartRecipeMixin(BaseModel):
 class SearchRecipe(Params, IsFavoritedCartRecipeMixin):
     author: int = Query(None, description="Показывать рецепты только автора с указанным id.")
 
-    async def search(self, query: Select) -> tuple[Select, Select]:
+    async def search(self, query: Select) -> tuple[Select, Select] | list[Select]:
         count = await self.count(Recipe)
         query = await self.limit_offset(query)
 

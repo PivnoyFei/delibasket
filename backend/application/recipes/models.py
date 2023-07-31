@@ -10,6 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import and_, case, func
+from sqlalchemy.sql.expression import Label
 from sqlalchemy.sql.functions import concat
 from starlette.requests import Request
 
@@ -27,7 +28,7 @@ class Favorite(Base, TimeStampMixin):
     recipe_id = Column(Integer, ForeignKey("recipe.id", ondelete='CASCADE'))
 
     @classmethod
-    def is_favorited(cls, user_id: int | None = None):
+    def is_favorited(cls, user_id: int | None = None) -> Label:
         return case(
             (and_(user_id != None, cls.user_id == user_id), "True"),
             else_="False",
@@ -42,7 +43,7 @@ class Cart(Base, TimeStampMixin):
     recipe_id = Column(Integer, ForeignKey("recipe.id", ondelete='CASCADE'))
 
     @classmethod
-    def is_in_shopping_cart(cls, user_id: int | None = None):
+    def is_in_shopping_cart(cls, user_id: int | None = None) -> Label:
         return case(
             (and_(user_id != None, cls.user_id == user_id), "True"),
             else_="False",
@@ -67,5 +68,5 @@ class Recipe(Base, TimeStampMixin):
     carts = relationship(Cart)
 
     @classmethod
-    def image_path(cls, request: Request):
+    def image_path(cls, request: Request) -> Label:
         return concat(f"{request.base_url}{MEDIA_URL}/", cls.image).label("image")

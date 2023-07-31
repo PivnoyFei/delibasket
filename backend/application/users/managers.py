@@ -11,11 +11,11 @@ from application.database import scoped_session
 from application.recipes.models import Recipe
 from application.schemas import SearchUser, SubscriptionsParams
 from application.users.models import Follow, User
-from application.users.schemas import UserBase, UserCreate, UserOut
+from application.users.schemas import UserCreate, UserOut
 
 
 class UserManager:
-    async def get_all(self, params: SearchUser, pk: int | None = None) -> list[UserBase]:
+    async def get_all(self, params: SearchUser, pk: int | None = None) -> tuple[int, list]:
         async with scoped_session() as session:
             count = await params.count(User)
             query = (
@@ -72,16 +72,14 @@ class UserManager:
             await session.commit()
             return query.scalar()
 
-    async def update(self, password: bytes, user_id: int) -> UserOut | None:
+    async def update(self, password: bytes, user_id: int) -> int | None:
         async with scoped_session() as session:
             try:
                 user = await session.execute(
                     update(User)
                     .where(User.id == user_id)
                     .values(password=password, updated_at=datetime.utcnow())
-                    .returning(
-                        *User.list_columns("id", "email", "username", "first_name", "last_name")
-                    )
+                    .returning(User.id)
                 )
                 await session.commit()
                 return user.one()
@@ -90,7 +88,7 @@ class UserManager:
                 await session.rollback()
                 return None
 
-    async def delete(self, session: AsyncSession, pk: int) -> None:
+    async def delete(self, pk: int) -> bool:
         async with scoped_session() as session:
             try:
                 await session.execute(delete(User).where(User.name == pk))
@@ -98,7 +96,7 @@ class UserManager:
                 return True
             except Exception:
                 await session.rollback()
-                return None
+                return False
 
 
 class FollowManager:
@@ -133,7 +131,9 @@ class FollowManager:
         query = await session.execute(query)
         return query.all()
 
-    async def is_subscribed_all(self, request: Request, params: SubscriptionsParams) -> list:
+    async def is_subscribed_all(
+        self, request: Request, params: SubscriptionsParams
+    ) -> tuple[int, list]:
         async with scoped_session() as session:
             user_id: int = request.user.id
             count = await params.count(User)

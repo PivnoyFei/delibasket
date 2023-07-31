@@ -1,5 +1,5 @@
 import json
-from typing import Any, Optional, Self
+from typing import Any, Optional
 
 from fastapi import Form, Query
 from pydantic import BaseModel
@@ -52,13 +52,13 @@ class FavoriteOut(BaseSchema):
 
 
 class BaseRecipe(BaseModel):
-    async def to_dict(self):
+    async def to_dict(self) -> NotImplementedError:
         raise NotImplementedError("Метод должен быть переопределен.")
 
-    async def tags_to_list(self, recipe_id):
+    async def tags_to_list(self, recipe_id: int) -> list[dict[str, int]]:
         return [{"recipe_id": recipe_id, "tag_id": pk} for pk in self.tags]
 
-    async def ingredients_to_list(self, recipe_id):
+    async def ingredients_to_list(self, recipe_id: int) -> list[dict[str, int]]:
         return [
             {"recipe_id": recipe_id, "ingredient_id": items["id"], "amount": int(items["amount"])}
             for items in self.ingredients
@@ -73,7 +73,7 @@ class CreateRecipe(BaseRecipe):
     ingredients: list[CreateAmountIngredient] = Form(...)
     tags: list[int] = Form(...)
 
-    async def to_dict(self, author_id, filename):
+    async def to_dict(self, author_id: int, filename: str) -> dict[str, Any]:
         return {
             "author_id": author_id,
             "text": self.text,
@@ -91,7 +91,7 @@ class UpdateRecipe(BaseRecipe):
     ingredients: list[CreateAmountIngredient] | None = None
     tags: list[int] | None = None
 
-    async def to_dict(self, recipe: Recipe, filename: str | None = None) -> dict:
+    async def to_dict(self, recipe: Recipe, filename: str | None = None) -> dict[str, Any]:
         result = {"image": filename} if filename else {}
         for item in ("text", "name", "cooking_time", "text"):
             if change := getattr(self, item, None):
@@ -127,12 +127,12 @@ class RecipeOut(BaseSchema):
 
     @staticmethod
     async def to_dict(
-        recipe: Self,
+        recipe: Recipe,
         ingredients: list,
         author: UserOut | None = None,
         is_favorited: Optional[int] = False,
         is_in_shopping_cart: Optional[int] = False,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """сложные запросы двойное соединение `Favorite` и `Cart` к `User` создает ошибку.
         author:
         ingredients: пока так."""

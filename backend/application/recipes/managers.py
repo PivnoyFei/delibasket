@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy import Result, delete, insert, select, update
@@ -28,7 +27,7 @@ class RecipeManager:
     async def _create_amount_ingredient(session: AsyncSession, ingredients: list) -> Result:
         return await session.execute(insert(AmountIngredient).values(ingredients))
 
-    async def create(self, items: dict, recipe: CreateRecipe) -> int:
+    async def create(self, items: dict, recipe: CreateRecipe) -> int | None:
         async with scoped_session() as session:
             try:
                 recipe_id = await session.scalar(
@@ -43,7 +42,8 @@ class RecipeManager:
 
             except (UniqueViolationError, AttributeError) as e:
                 await session.rollback()
-                return e
+                print(f"== RecipeManager == create == {e}")
+                return None
 
     async def update(self, pk: int, items: dict, recipe: CreateRecipe) -> int | None:
         async with scoped_session() as session:
@@ -76,7 +76,7 @@ class RecipeManager:
             query = await session.execute(select(Recipe.author_id).where(Recipe.id == pk))
             return query.one()
 
-    async def get(self, request: Request, pk: int) -> RecipeOut:
+    async def get(self, request: Request, pk: int) -> dict:
         async with scoped_session() as session:
             user_id = request.user.id
             query = await session.execute(
@@ -103,7 +103,11 @@ class RecipeManager:
             )
 
     @staticmethod
-    async def session_is_favorited(session: AsyncSession, recipe_id: int, user_id: int):
+    async def session_is_favorited(
+        session: AsyncSession,
+        recipe_id: int,
+        user_id: int,
+    ) -> int | None:
         query = await session.execute(
             select(Favorite.id).where(
                 Favorite.recipe_id == recipe_id,
@@ -113,7 +117,7 @@ class RecipeManager:
         return query.one_or_none()
 
     @staticmethod
-    async def session_is_cart(session: AsyncSession, recipe_id: int, user_id: int):
+    async def session_is_cart(session: AsyncSession, recipe_id: int, user_id: int) -> int | None:
         query = await session.execute(
             select(Cart.id).where(
                 Cart.recipe_id == recipe_id,
@@ -122,7 +126,9 @@ class RecipeManager:
         )
         return query.one_or_none()
 
-    async def get_all(self, request: Request, params: SearchRecipe, tags: QueryParams) -> tuple[int, list]:
+    async def get_all(
+        self, request: Request, params: SearchRecipe, tags: QueryParams
+    ) -> tuple[int, list]:
         async with scoped_session() as session:
             user_id = request.user.id
             query = (

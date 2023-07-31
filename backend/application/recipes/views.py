@@ -7,22 +7,18 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse, JSONResponse, Response
 from starlette.background import BackgroundTask
 from starlette.requests import Request
-from starlette.status import (
-    HTTP_200_OK,
-    HTTP_201_CREATED,
-    HTTP_204_NO_CONTENT,
-    HTTP_400_BAD_REQUEST,
-)
+from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from application.auth.permissions import IsAuthenticated, IsAvtor, PermissionsDependency
+from application.exceptions import BadRequestException, NotFoundException
 from application.managers import Manager
 from application.recipes.managers import FavoriteCartManager, RecipeManager
 from application.recipes.models import Cart, Favorite, Recipe
-from application.recipes.schemas import CreateRecipe, FavoriteOut, RecipeOut, UpdateRecipe
+from application.recipes.schemas import CreateRecipe, RecipeOut, UpdateRecipe
 from application.recipes.utils import base64_image
 from application.schemas import QueryParams, Result, SearchRecipe
 from application.services import get_result, image_delete
-from application.settings import FILES_ROOT, NOT_FOUND
+from application.settings import FILES_ROOT
 
 router = APIRouter()
 favorite = FavoriteCartManager(Favorite)
@@ -36,7 +32,7 @@ cart = FavoriteCartManager(Cart)
     response_description="Рецепт успешно создан",
     status_code=HTTP_201_CREATED,
 )
-async def create_recipe(request: Request, recipe_in: CreateRecipe) -> Any:
+async def create_recipe(request: Request, recipe_in: CreateRecipe) -> JSONResponse:
     """Создание рецепта.
     Доступно только авторизованному пользователю.
     Картинка в фронтенда поступает в формате base64."""
@@ -47,9 +43,11 @@ async def create_recipe(request: Request, recipe_in: CreateRecipe) -> Any:
 
     except (Exception, UniqueViolationError):
         await image_delete(image_path=image_path)
-        return JSONResponse({"errors": "Error recipe"}, HTTP_400_BAD_REQUEST)
+        raise BadRequestException("Ошибка создания рецепта")
 
-    return await RecipeManager().get(request, recipe_id)
+    if recipe_id:
+        return await RecipeManager().get(request, recipe_id)
+    raise NotFoundException
 
 
 @router.get("/", response_model=Result[RecipeOut], status_code=HTTP_200_OK)
@@ -57,21 +55,16 @@ async def get_recipes(
     request: Request,
     params: SearchRecipe = Depends(),
     tags_in: QueryParams = Depends(QueryParams),
-) -> Any:
+) -> JSONResponse:
     """Список рецептов.
     Страница доступна всем пользователям.
     Доступна фильтрация по избранному, автору, списку покупок и тегам."""
     user_id = request.user.id
 
     if (params.is_favorited or params.is_in_shopping_cart) and not user_id:
-        return JSONResponse(
-            {
-                "errors": (
-                    "Доступна фильтрация по избранному и списку покупок "
-                    "доступна только авторизованному пользователю"
-                )
-            },
-            HTTP_400_BAD_REQUEST,
+        raise BadRequestException(
+            "Доступна фильтрация по избранному и списку покупок "
+            "доступна только авторизованному пользователю"
         )
 
     params.is_favorited = False if params.is_favorited and user_id else True
@@ -124,15 +117,17 @@ async def download_shopping_cart(request: Request) -> FileResponse | JSONRespons
                 await buffer.write("".join(cart_list))
 
         except Exception:
-            return JSONResponse({"errors": "Error download shopping cart"}, HTTP_400_BAD_REQUEST)
+            raise BadRequestException("Не удалось загрузить корзину")
         return FileResponse(file_path, background=BackgroundTask(cleanup))
-    return NOT_FOUND
+    raise NotFoundException
 
 
 @router.get("/{recipe_id}/", response_model=RecipeOut, status_code=HTTP_200_OK)
 async def get_recipe(request: Request, recipe_id: int) -> Any:
     """Получение рецепта."""
-    return await RecipeManager().get(request, recipe_id) or NOT_FOUND
+    if result := await RecipeManager().get(request, recipe_id):
+        return result
+    raise NotFoundException
 
 
 @router.patch(
@@ -151,7 +146,7 @@ async def update_recipe(request: Request, recipe_id: int, recipe_in: UpdateRecip
 
     recipe: Recipe | None = await Manager(Recipe).by_id(recipe_id)
     if not recipe:
-        return NOT_FOUND
+        raise NotFoundException
 
     if await IsAvtor().caxtom_has_permission(request, recipe.author_id):
         if recipe_in.image:
@@ -173,7 +168,7 @@ async def update_recipe(request: Request, recipe_id: int, recipe_in: UpdateRecip
             if recipe_in.image:
                 await image_delete(filename=recipe.image)
 
-    return JSONResponse({"errors": "При обновлении рецепта произошла ошибка"}, HTTP_400_BAD_REQUEST)
+    raise BadRequestException("При обновлении рецепта произошла ошибка")
 
 
 @router.delete(
@@ -185,13 +180,13 @@ async def delete_recipe(request: Request, recipe_id: int) -> JSONResponse:
     """Удаление рецепта. Доступно только автору данного рецепта"""
     author_id = await RecipeManager().author_by_id(recipe_id)
     if not author_id:
-        return NOT_FOUND
+        raise NotFoundException
 
     if await IsAvtor().caxtom_has_permission(request, author_id):
         if await Manager(Recipe).delete(recipe_id):
             return Response(status_code=HTTP_204_NO_CONTENT)
 
-    return JSONResponse({"errors": "При обновлении рецепта произошла ошибка"}, HTTP_400_BAD_REQUEST)
+    raise BadRequestException("При удалении рецепта произошла ошибка")
 
 
 @router.post(
@@ -203,9 +198,9 @@ async def create_favorite(request: Request, recipe_id: int) -> JSONResponse:
     """Добавить рецепт в избранное. Доступно только авторизованному пользователю."""
     if await favorite.create(request, recipe_id, request.user.id):
         return JSONResponse({"detail": "Рецепт успешно добавлен в избранное"}, HTTP_201_CREATED)
-    return JSONResponse(
-        {"errors": "Ошибка добавления в избранное (Например, когда рецепт уже есть в избранном)"},
-        HTTP_400_BAD_REQUEST,
+
+    raise BadRequestException(
+        "Ошибка добавления в избранное (Например, когда рецепт уже есть в избранном)"
     )
 
 
@@ -219,10 +214,7 @@ async def delete_favorite(request: Request, recipe_id: int) -> JSONResponse:
     if await favorite.delete(recipe_id, request.user.id):
         return Response(status_code=HTTP_204_NO_CONTENT)
 
-    return JSONResponse(
-        {"errors": "Ошибка удаления из избранного (Например, когда рецепта там не было)"},
-        HTTP_400_BAD_REQUEST,
-    )
+    raise BadRequestException("Ошибка удаления из избранного (Например, когда рецепта там не было)")
 
 
 @router.post(
@@ -237,12 +229,9 @@ async def create_cart(request: Request, recipe_id: int) -> JSONResponse:
             {"detail": "Рецепт успешно добавлен в список покупок"},
             HTTP_201_CREATED,
         )
-    return JSONResponse(
-        {
-            "errors": "Ошибка добавления в список покупок "
-            "(Например, когда рецепт уже есть в списке покупок)"
-        },
-        HTTP_400_BAD_REQUEST,
+
+    raise BadRequestException(
+        "Ошибка добавления в список покупок " "(Например, когда рецепт уже есть в списке покупок)"
     )
 
 
@@ -256,7 +245,6 @@ async def delete_cart(request: Request, recipe_id: int) -> JSONResponse:
     if await cart.delete(recipe_id, request.user.id):
         return Response(status_code=HTTP_204_NO_CONTENT)
 
-    return JSONResponse(
-        {"errors": "Ошибка удаления из списка покупок (Например, когда рецепта там не было)"},
-        HTTP_400_BAD_REQUEST,
+    raise BadRequestException(
+        "Ошибка удаления из списка покупок (Например, когда рецепта там не было)"
     )

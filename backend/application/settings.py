@@ -3,8 +3,6 @@ from datetime import timedelta
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import status
-from fastapi.responses import JSONResponse
 from pydantic import AnyHttpUrl, BaseSettings, PostgresDsn, root_validator, validator
 
 load_dotenv()
@@ -52,11 +50,9 @@ MEDIA_ROOT: str = os.path.join(BASE_DIR, MEDIA_URL)
 FILES_ROOT: str = os.path.join(MEDIA_ROOT, "files")
 DATA_ROOT: str = os.path.join(BASE_DIR, "data")
 
-ALLOWED_TYPES: type[str] = ("jpeg", "jpg", "png", "gif")
+ALLOWED_TYPES: tuple[str, str, str, str] = ("jpeg", "jpg", "png", "gif")
 INVALID_FILE: str = "Please upload a valid image."
 INVALID_TYPE: str = "The type of the image couldn't be determined."
-
-NOT_FOUND: JSONResponse = JSONResponse({"detail": "NotFound"}, status.HTTP_404_NOT_FOUND)
 
 TOKEN_EXP: timedelta = timedelta(weeks=2)
 PAGINATION_SIZE: int = 6

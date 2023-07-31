@@ -40,7 +40,7 @@ class TimeStampMixin:
         select(Your_model.id, Your_other_model.json_build_object("your_attr"))
         """
 
-        build = []
+        build: list[tuple[str, Any]] = []
         if args:
             for name in args:
                 if not isinstance(name, str):

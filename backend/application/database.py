@@ -15,7 +15,7 @@ from sqlalchemy.orm import declared_attr
 from application.settings import settings
 
 
-def resolve_table_name(name):
+def resolve_table_name(name: str) -> str:
     """Resolves table names to their mapped names."""
     names = re.split('(?=[A-Z])', name)
     return '_'.join([x.lower() for x in names if x])
@@ -23,7 +23,7 @@ def resolve_table_name(name):
 
 class CustomBase:
     @declared_attr
-    def __tablename__(cls):
+    def __tablename__(cls) -> str:
         return resolve_table_name(cls.__name__)
 
 

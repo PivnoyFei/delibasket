@@ -44,7 +44,8 @@ class Manager(BaseManager):
                 await session.commit()
                 return query.scalar()
         except UniqueViolationError as e:
-            return e
+            print(f"== Manager == create == {e}")
+            return None
 
     async def by_id(self, pk: int) -> _TM | None:
         async with scoped_session() as session:
@@ -54,11 +55,11 @@ class Manager(BaseManager):
         self,
         params: Sequence[_TS],
         attr_name: str,
-        query: list | None = None,
+        query_in: list | None = None,
     ) -> tuple[int, list[_TM]]:
         async with scoped_session() as session:
             count = await params.count(self.model)
-            query = await params.limit_offset(select(*query))
+            query = await params.limit_offset(select(*query_in))
             count, query = [await params.search(i, attr_name, self.model) for i in (count, query)]
             return await session.scalar(count), list(await session.scalars(query))
 
@@ -66,10 +67,10 @@ class Manager(BaseManager):
         self,
         params: Sequence[_TS],
         attr_name: str,
-        query: list | None = None,
+        query_in: list | None = None,
     ) -> list:
         async with scoped_session() as session:
-            query = await params.search(select(*query), attr_name, self.model)
+            query = await params.search(select(*query_in), attr_name, self.model)
             query = await session.execute(await params.limit_offset(query))
             return query.all()
 
@@ -85,16 +86,18 @@ class Manager(BaseManager):
                 await session.commit()
                 return query.scalar()
 
-            except Exception:
+            except Exception as e:
                 await session.rollback()
+                print(f"== Manager == update == {e}")
                 return None
 
-    async def delete(self, pk: int) -> list:
+    async def delete(self, pk: int) -> bool:
         async with scoped_session() as session:
             try:
                 await session.execute(delete(self.model).where(self.model.id == pk))
                 await session.commit()
                 return True
-            except Exception:
+            except Exception as e:
                 await session.rollback()
+                print(f"== Manager == delete == {e}")
                 return False

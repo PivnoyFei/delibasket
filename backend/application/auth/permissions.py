@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from fastapi import HTTPException
 from starlette.authentication import AuthenticationBackend
 from starlette.requests import HTTPConnection, Request
-from starlette.status import HTTP_400_BAD_REQUEST
 
 from application.auth.managers import AuthTokenManager
 from application.auth.schemas import CurrentUser
-from application.exceptions import CustomException, ForbiddenException, UnauthorizedException
+from application.exceptions import (
+    BadRequestException,
+    CustomException,
+    ForbiddenException,
+    UnauthorizedException,
+)
 from application.users.models import User
 
 
@@ -30,7 +33,7 @@ class AuthBackend(AuthenticationBackend):
     async def get_current_user(self, token: str) -> User | None:
         user: User = await AuthTokenManager().check(token)
         if user and not user.is_active:
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Inactive user")
+            raise BadRequestException("Неактивный пользователь")
         return user
 
 

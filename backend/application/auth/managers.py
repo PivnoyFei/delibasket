@@ -34,7 +34,7 @@ class AuthTokenManager:
             )
             return query.scalar()
 
-    async def delete(self, user_id: int) -> None:
+    async def delete(self, user_id: int) -> bool:
         """Удаляет все токены при выходе владельца."""
         async with scoped_session() as session:
             try:
@@ -42,4 +42,4 @@ class AuthTokenManager:
                 await session.commit()
                 return True
             except TypeError:
-                return None
+                return False

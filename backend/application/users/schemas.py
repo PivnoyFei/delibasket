@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import HTTPException, status
 from pydantic import BaseModel, EmailStr, Field, constr, root_validator, validator
 
@@ -23,7 +25,7 @@ class UserCreate(BaseModel):
         anystr_strip_whitespace = True
 
     @validator("password", pre=True)
-    def hash(cls, v) -> bytes:
+    def hash(cls, v: Any) -> bytes:
         return hash_password(v)
 
 
