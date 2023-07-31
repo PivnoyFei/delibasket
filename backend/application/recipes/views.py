@@ -16,7 +16,7 @@ from application.recipes.managers import FavoriteCartManager, RecipeManager
 from application.recipes.models import Cart, Favorite, Recipe
 from application.recipes.schemas import CreateRecipe, RecipeOut, UpdateRecipe
 from application.recipes.utils import base64_image
-from application.schemas import QueryParams, Result, SearchRecipe
+from application.schemas import Result, SearchRecipe
 from application.services import image_delete
 from application.settings import FILES_ROOT
 
@@ -51,11 +51,7 @@ async def create_recipe(request: Request, recipe_in: CreateRecipe) -> JSONRespon
 
 
 @router.get("/", response_model=Result[RecipeOut], status_code=HTTP_200_OK)
-async def get_recipes(
-    request: Request,
-    params: SearchRecipe = Depends(),
-    tags_in: QueryParams = Depends(QueryParams),
-) -> JSONResponse:
+async def get_recipes(request: Request, params: SearchRecipe = Depends()) -> JSONResponse:
     """Список рецептов.
     Страница доступна всем пользователям.
     Доступна фильтрация по избранному, автору, списку покупок и тегам."""
@@ -70,7 +66,7 @@ async def get_recipes(
     params.is_favorited = False if params.is_favorited and user_id else True
     params.is_in_shopping_cart = False if params.is_in_shopping_cart and user_id else True
 
-    count, result = await RecipeManager().get_all(request, params, tags_in)
+    count, result = await RecipeManager().get_all(request, params)
     return await Result.result(request.url, count, params, result)
 
 

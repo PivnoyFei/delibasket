@@ -28,10 +28,6 @@ class User(Base, TimeStampMixin):
     is_staff = Column(Boolean, nullable=False, default=False)
     is_superuser = Column(Boolean, nullable=False, default=False)
 
-    @property
-    def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
-
     async def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode("utf-8"), self.password)
 

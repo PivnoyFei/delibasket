@@ -2,7 +2,6 @@ from typing import Any, Generic, Sequence, TypeVar
 
 from fastapi import Query
 from pydantic import AnyUrl, BaseModel, Field
-from pydantic.dataclasses import dataclass
 from pydantic.generics import GenericModel
 from sqlalchemy import Select, select
 from sqlalchemy.sql import func
@@ -17,14 +16,6 @@ name_en_str = "^[A-Za-z]+$"
 
 _TS = TypeVar('_TS')
 _TM = TypeVar('_TM')
-
-
-@dataclass
-class QueryParams:
-    tags: list[int | str] = Query(
-        None,
-        description="Показывать рецепты только с указанными тегами (по slug)",
-    )
 
 
 class BaseSchema(BaseModel):
@@ -125,6 +116,9 @@ class IsFavoritedCartRecipeMixin(BaseModel):
 
 class SearchRecipe(Params, IsFavoritedCartRecipeMixin):
     author: int = Query(None, description="Показывать рецепты только автора с указанным id.")
+    tags: list[str] = Field(
+        Query([], description="Показывать рецепты только с указанными тегами (по slug)")
+    )
 
     async def search(self, query: Select) -> tuple[Select, Select] | list[Select]:
         count = await self.count(Recipe)

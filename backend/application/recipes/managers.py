@@ -12,7 +12,7 @@ from application.ingredients.models import AmountIngredient, Ingredient
 from application.managers import BaseManager
 from application.recipes.models import Cart, Favorite, Recipe
 from application.recipes.schemas import CreateRecipe, FavoriteOut, RecipeOut
-from application.schemas import QueryParams, SearchRecipe
+from application.schemas import SearchRecipe
 from application.tags.models import Tag, recipe_tag
 from application.users.managers import UserManager
 from application.users.models import User
@@ -126,9 +126,7 @@ class RecipeManager:
         )
         return query.one_or_none()
 
-    async def get_all(
-        self, request: Request, params: SearchRecipe, tags: QueryParams
-    ) -> tuple[int, list]:
+    async def get_all(self, request: Request, params: SearchRecipe) -> tuple[int, list]:
         async with scoped_session() as session:
             user_id = request.user.id
             query = (
@@ -167,15 +165,15 @@ class RecipeManager:
                 ]
                 query = query.group_by(Cart.user_id)
 
-            if tags and tags.tags:
+            if params.tags:
                 query = (
                     query.join(Recipe.tags, isouter=True)
-                    .where(Tag.slug.in_(tags.tags))
-                    .having(func.count(Tag.slug) == len(tags.tags))
+                    .where(Tag.slug.in_(params.tags))
+                    .having(func.count(Tag.slug) == len(params.tags))
                 )
                 count = (
                     count.join(Recipe.tags, isouter=True)
-                    .where(Tag.slug.in_(tags.tags))
+                    .where(Tag.slug.in_(params.tags))
                     .group_by(Tag.slug)
                     .distinct()
                 )
