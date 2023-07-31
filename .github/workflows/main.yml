@@ -12,10 +12,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.11.0
+          python-version: '3.11'
+
+      - name: Set up Poetry
+        uses: abatilo/actions-poetry@v2
+
       - name: Install deps
-        run: pip install flake8 flake8-isort
-      - name: Run flake8
-        run: flake8 .
+        run: |
+          cd backend
+          poetry install
+
+      - name: Check black
+        run: |
+          cd backend
+          poetry run black .
