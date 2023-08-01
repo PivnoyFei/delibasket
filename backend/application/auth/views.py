@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.post("/login/", response_model=TokenBase, status_code=HTTP_201_CREATED)
 async def login(user_in: UserLogin) -> JSONResponse:
-    """Получить токен авторизации.
+    """Получить токен авторизации.<br>
     Используется для авторизации по емейлу и паролю, чтобы далее использовать токен при запросах."""
     user = await UserManager().by_email(user_in.email)
     if not user:

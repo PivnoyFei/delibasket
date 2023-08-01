@@ -52,11 +52,9 @@ async def me(request: Request) -> JSONResponse:
     status_code=HTTP_200_OK,
 )
 async def subscriptions(request: Request, params: SubscriptionsParams = Depends()) -> dict:
-    """
-    Мои подписки.
-    Возвращает пользователей, на которых подписан текущий пользователь.
-    В выдачу добавляются рецепты.
-    """
+    """Мои подписки.<br>
+    Возвращает пользователей, на которых подписан текущий пользователь.<br>
+    В выдачу добавляются рецепты."""
     count, results = await FollowManager().is_subscribed_all(request, params)
     return await Result.result(request.url, count, params, results)
 
@@ -67,10 +65,8 @@ async def subscriptions(request: Request, params: SubscriptionsParams = Depends(
     status_code=HTTP_204_NO_CONTENT,
 )
 async def set_password(request: Request, password_in: SetPassword) -> JSONResponse:
-    """
-    Изменение пароля пользователя.
-    Администратор может изменять пароль любого пользователя.
-    """
+    """Изменение пароля пользователя.<br>
+    Администратор может изменять пароль любого пользователя."""
     if await request.user.check_password(password_in.current_password):
         if await UserManager().update(password_in.new_password, request.user.id):
             return Response(status_code=HTTP_204_NO_CONTENT)

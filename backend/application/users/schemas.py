@@ -21,6 +21,15 @@ class UserCreate(BaseModel):
 
     class Config:
         str_strip_whitespace = True
+        schema_extra = {
+            "example": {
+                "email": "vpupkin@delibasket.ru",
+                "username": "vasyapupkin",
+                "first_name": "Вася",
+                "last_name": "Пупкин",
+                "password": "Qwerty123",
+            }
+        }
 
     @field_validator("password")
     @classmethod

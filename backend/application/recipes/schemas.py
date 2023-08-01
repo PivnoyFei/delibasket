@@ -1,29 +1,13 @@
-import json
 from typing import Any, Optional
 
-from fastapi import Form, Query
+from fastapi import Form
 from pydantic import BaseModel
-from pydantic.dataclasses import dataclass
 
+from application.ingredients.schemas import IngredientOut
 from application.recipes.models import Recipe
 from application.schemas import BaseSchema
+from application.tags.schemas import TagOut
 from application.users.schemas import UserOut
-
-
-@dataclass
-class QueryParams:
-    tags: list[int | str] = Query(None)
-
-
-class TagOut(BaseSchema):
-    name: str
-    color: str
-    slug: str
-
-
-class IngredientOut(BaseSchema):
-    name: str
-    measurement_unit: str
 
 
 class AmountOut(IngredientOut):
@@ -33,22 +17,6 @@ class AmountOut(IngredientOut):
 class CreateAmountIngredient(BaseModel):
     id: int = 0
     amount: int | str = 0
-
-    @classmethod
-    def __get_validators__(cls) -> Any:
-        yield cls.validate_to_json
-
-    @classmethod
-    def validate_to_json(cls, value: Any) -> Any:
-        if isinstance(value, str):
-            return cls(**json.loads(value))
-        return value
-
-
-class FavoriteOut(BaseSchema):
-    name: str
-    image: str
-    cooking_time: int
 
 
 class BaseRecipe(BaseModel):
@@ -60,18 +28,26 @@ class BaseRecipe(BaseModel):
 
     async def ingredients_to_list(self, recipe_id: int) -> list[dict[str, int]]:
         return [
-            {"recipe_id": recipe_id, "ingredient_id": items["id"], "amount": int(items["amount"])}
+            {"recipe_id": recipe_id, "ingredient_id": items.id, "amount": int(items.amount)}
             for items in self.ingredients
         ]
 
 
 class CreateRecipe(BaseRecipe):
-    text: str = Form(...)
-    name: str = Form(...)
-    image: str = Form(...)
-    cooking_time: int = Form(...)
-    ingredients: list[CreateAmountIngredient] = Form(...)
-    tags: list[int] = Form(...)
+    text: str = Form(..., description="Описание")
+    name: str = Form(..., max_length=200, description="Название")
+    image: str = Form(..., description="Ссылка на картинку на сайте")
+    cooking_time: int = Form(..., min_value=1, description="Время приготовления (в минутах)")
+    ingredients: list[CreateAmountIngredient] = Form(..., description="Список ингредиентов")
+    tags: list[int] = Form(..., description="Список тегов")
+
+    class Config:
+        str_strip_whitespace = True
+        schema_extra = {
+            "example": {
+                "tags": [1, 2],
+            }
+        }
 
     async def to_dict(self, author_id: int, filename: str) -> dict[str, Any]:
         return {

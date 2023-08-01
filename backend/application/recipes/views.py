@@ -33,8 +33,8 @@ cart = FavoriteCartManager(Cart)
     status_code=HTTP_201_CREATED,
 )
 async def create_recipe(request: Request, recipe_in: CreateRecipe) -> JSONResponse:
-    """Создание рецепта.
-    Доступно только авторизованному пользователю.
+    """Создание рецепта.<br>
+    Доступно только авторизованному пользователю.<br>
     Картинка в фронтенда поступает в формате base64."""
     filename, image_path = await base64_image(recipe_in.image)
     try:
@@ -52,8 +52,8 @@ async def create_recipe(request: Request, recipe_in: CreateRecipe) -> JSONRespon
 
 @router.get("/", response_model=Result[RecipeOut], status_code=HTTP_200_OK)
 async def get_recipes(request: Request, params: SearchRecipe = Depends()) -> JSONResponse:
-    """Список рецептов.
-    Страница доступна всем пользователям.
+    """Список рецептов.<br>
+    Страница доступна всем пользователям.<br>
     Доступна фильтрация по избранному, автору, списку покупок и тегам."""
     user_id = request.user.id
 
@@ -77,10 +77,10 @@ async def get_recipes(request: Request, params: SearchRecipe = Depends()) -> JSO
     status_code=HTTP_200_OK,
 )
 async def download_shopping_cart(request: Request) -> FileResponse | JSONResponse:
-    """Скачать файл со списком покупок.
-    Это может быть TXT/PDF/CSV.
-    Пользователь получает файл с суммированным перечнем
-    и количеством необходимых ингредиентов для всех рецептов.
+    """Скачать файл со списком покупок.<br>
+    Это может быть TXT/PDF/CSV.<br>
+    Пользователь получает файл с суммированным перечнем <br>
+    и количеством необходимых ингредиентов для всех рецептов.<br>
     Доступно только авторизованным пользователям.
     """
 
@@ -130,13 +130,12 @@ async def get_recipe(request: Request, recipe_id: int) -> Any:
     "/{recipe_id}/",
     response_model=RecipeOut,
     dependencies=[Depends(PermissionsDependency([IsAuthenticated]))],
-    response_description="Рецепт успешно обновлен",
     status_code=HTTP_200_OK,
 )
 async def update_recipe(request: Request, recipe_id: int, recipe_in: UpdateRecipe) -> JSONResponse:
-    """Обновление рецепта.
-    Доступно только автору данного рецепта
-    Перед редактированием рецепта, фронт получает данные рецепта
+    """Обновление рецепта.<br>
+    Доступно только автору данного рецепта <br>
+    Перед редактированием рецепта, фронт получает данные рецепта <br>
     и после изменения пользователем отправляет сюда.
     """
 
@@ -206,7 +205,7 @@ async def create_favorite(request: Request, recipe_id: int) -> JSONResponse:
     status_code=HTTP_204_NO_CONTENT,
 )
 async def delete_favorite(request: Request, recipe_id: int) -> JSONResponse:
-    """Удалить рецепт из избранного. Доступно только авторизованным пользователям."""
+    """Удалить рецепт из избранного. <br>Доступно только авторизованным пользователям."""
     if await favorite.delete(recipe_id, request.user.id):
         return Response(status_code=HTTP_204_NO_CONTENT)
 

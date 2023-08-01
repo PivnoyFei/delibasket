@@ -3,8 +3,17 @@ from pydantic import BaseModel
 
 
 class IngredientCreate(BaseModel):
-    name: str = Form()
-    measurement_unit: str = Form()
+    name: str = Form(..., description="Название")
+    measurement_unit: str = Form(..., description="Единицы измерения")
+
+    class Config:
+        str_strip_whitespace = True
+        schema_extra = {
+            "example": {
+                "name": "Капуста",
+                "measurement_unit": "кг",
+            }
+        }
 
 
 class IngredientUpdate(BaseModel):

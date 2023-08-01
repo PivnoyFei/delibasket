@@ -14,13 +14,13 @@ class CustomException(Exception):
 class ForbiddenException(CustomException):
     code = HTTPStatus.FORBIDDEN
     error_code = HTTPStatus.FORBIDDEN
-    message = HTTPStatus.FORBIDDEN.description
+    message = "У вас недостаточно прав для выполнения данного действия."
 
 
 class UnauthorizedException(CustomException):
     code = HTTPStatus.UNAUTHORIZED
     error_code = HTTPStatus.UNAUTHORIZED
-    message = HTTPStatus.UNAUTHORIZED.description
+    message = "Учетные данные не были предоставлены."
 
 
 class BadRequestException(CustomException):
@@ -32,4 +32,4 @@ class BadRequestException(CustomException):
 class NotFoundException(CustomException):
     code = HTTPStatus.NOT_FOUND
     error_code = HTTPStatus.NOT_FOUND
-    message = HTTPStatus.NOT_FOUND.description
+    message = "Страница не найдена."

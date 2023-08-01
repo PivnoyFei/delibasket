@@ -16,7 +16,10 @@ from application.users.models import User
 
 
 class AuthBackend(AuthenticationBackend):
-    """Отдает `CurrentUser` для дальнейшей работы с неавторизованными пользователями.
+    """Авторизация по токену.
+    Все запросы от имени пользователя должны выполняться с заголовком
+    "Authorization: Token TOKENVALUE"
+    Отдает `CurrentUser` для дальнейшей работы с неавторизованными пользователями.
     Для авторизованных пользователей отдает `User`."""
 
     async def authenticate(self, conn: HTTPConnection) -> tuple[bool, Optional[User]]:

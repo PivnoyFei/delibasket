@@ -11,7 +11,7 @@ from application.ingredients.managers import AmountManager
 from application.ingredients.models import AmountIngredient, Ingredient
 from application.managers import BaseManager
 from application.recipes.models import Cart, Favorite, Recipe
-from application.recipes.schemas import CreateRecipe, FavoriteOut, RecipeOut
+from application.recipes.schemas import CreateRecipe, FavoriteOut, RecipeOut, UpdateRecipe
 from application.schemas import SearchRecipe
 from application.tags.models import Tag, recipe_tag
 from application.users.managers import UserManager
@@ -27,15 +27,15 @@ class RecipeManager:
     async def _create_amount_ingredient(session: AsyncSession, ingredients: list) -> Result:
         return await session.execute(insert(AmountIngredient).values(ingredients))
 
-    async def create(self, items: dict, recipe: CreateRecipe) -> int | None:
+    async def create(self, items: dict, recipe_in: CreateRecipe) -> int | None:
         async with scoped_session() as session:
             try:
                 recipe_id = await session.scalar(
                     insert(Recipe).values(**items).returning(Recipe.id)
                 )
-                await self._create_recipe_tag(session, await recipe.tags_to_list(recipe_id))
+                await self._create_recipe_tag(session, await recipe_in.tags_to_list(recipe_id))
                 await self._create_amount_ingredient(
-                    session, await recipe.ingredients_to_list(recipe_id)
+                    session, await recipe_in.ingredients_to_list(recipe_id)
                 )
                 await session.commit()
                 return recipe_id
@@ -45,7 +45,7 @@ class RecipeManager:
                 print(f"== RecipeManager == create == {e}")
                 return None
 
-    async def update(self, pk: int, items: dict, recipe: CreateRecipe) -> int | None:
+    async def update(self, pk: int, items: dict, recipe_in: UpdateRecipe) -> int | None:
         async with scoped_session() as session:
             try:
                 recipe_id = await session.scalar(
@@ -55,20 +55,21 @@ class RecipeManager:
                     .returning(Recipe.id)
                 )
                 await session.execute(delete(recipe_tag).where(recipe_tag.c.recipe_id == pk))
-                await self._create_recipe_tag(session, await recipe.tags_to_list(recipe_id))
+                await self._create_recipe_tag(session, await recipe_in.tags_to_list(recipe_id))
 
                 await session.execute(
                     delete(AmountIngredient).where(AmountIngredient.recipe_id == pk)
                 )
                 await self._create_amount_ingredient(
-                    session, await recipe.ingredients_to_list(recipe_id)
+                    session, await recipe_in.ingredients_to_list(recipe_id)
                 )
 
                 await session.commit()
                 return recipe_id
 
-            except Exception:
+            except Exception as e:
                 await session.rollback()
+                print(f"== RecipeManager == update == {e}")
                 return None
 
     async def author_by_id(self, pk: int) -> int:
