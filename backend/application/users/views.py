@@ -5,7 +5,7 @@ from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from application.auth.permissions import IsAdmin, IsAuthenticated, PermissionsDependency
 from application.exceptions import BadRequestException, NotFoundException
-from application.schemas import Result, SearchUser, SubscriptionsParams
+from application.schemas import Result, SearchUser, SubParams
 from application.users.managers import FollowManager, UserManager
 from application.users.schemas import FollowOut, SetPassword, UserCreate, UserOut
 
@@ -51,11 +51,11 @@ async def me(request: Request) -> JSONResponse:
     dependencies=[Depends(PermissionsDependency([IsAuthenticated]))],
     status_code=HTTP_200_OK,
 )
-async def subscriptions(request: Request, params: SubscriptionsParams = Depends()) -> dict:
+async def subscriptions(request: Request, params: SubParams = Depends()) -> dict:
     """Мои подписки.<br>
     Возвращает пользователей, на которых подписан текущий пользователь.<br>
     В выдачу добавляются рецепты."""
-    count, results = await FollowManager().is_subscribed_all(request, params)
+    count, results = await FollowManager().is_subscribed(request, params)
     return await Result.result(request.url, count, params, results)
 
 

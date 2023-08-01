@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Column, DateTime, case, func
-from sqlalchemy.sql.expression import Label
+from sqlalchemy.sql.expression import Case
 
 
 class TimeStampMixin:
@@ -31,7 +31,7 @@ class TimeStampMixin:
         return [getattr(cls, c.name) for c in cls.__table__.columns]
 
     @classmethod
-    def json_build_object(cls, *args: str) -> Label[Any]:
+    def json_build_object(cls, *args: str) -> Case[Any]:
         """
         Получить объект в json, со всеми или некоторыми колоноками таблицы.
 
@@ -61,10 +61,10 @@ class TimeStampMixin:
                 func.json_build_object(*build),
             ),
             else_=None,
-        ).label(cls.__tablename__)
+        )
 
     @classmethod
-    def json_agg(cls, *args: str) -> Label[Any]:
+    def json_agg(cls, *args: str) -> Case[Any]:
         """
         Получить список объектов в json, со всеми или некоторыми колоноками таблицы.
 
@@ -78,4 +78,4 @@ class TimeStampMixin:
                 func.json_agg(cls.json_build_object(*args)),
             ),
             else_=None,
-        ).label(cls.__tablename__)
+        )

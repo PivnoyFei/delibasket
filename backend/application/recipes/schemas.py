@@ -19,6 +19,12 @@ class CreateAmountIngredient(BaseModel):
     amount: int | str = 0
 
 
+class FavoriteOut(BaseSchema):
+    name: str
+    image: str
+    cooking_time: int
+
+
 class BaseRecipe(BaseModel):
     async def to_dict(self) -> NotImplementedError:
         raise NotImplementedError("Метод должен быть переопределен.")

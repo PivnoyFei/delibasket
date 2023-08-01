@@ -52,7 +52,7 @@ class Params(BaseModel):
         return query.limit(self.limit).offset(self.limit * (self.page - 1))
 
 
-class SubscriptionsParams(Params):
+class SubParams(Params):
     recipes_limit: int = Query(
         3,
         ge=1,
@@ -72,6 +72,8 @@ class SubscriptionsParams(Params):
                 "first_name": items.first_name,
                 "last_name": items.last_name,
                 "is_subscribed": items.is_subscribed,
+                "recipes": items.recipes,
+                "recipes_count": self.recipes_limit,
             }
             for items in results
         ]

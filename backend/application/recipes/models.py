@@ -1,3 +1,4 @@
+from typing import Any
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -13,6 +14,7 @@ from sqlalchemy.sql import and_, case, func
 from sqlalchemy.sql.expression import Label
 from sqlalchemy.sql.functions import concat
 from starlette.requests import Request
+from sqlalchemy.dialects.postgresql import aggregate_order_by
 
 from application.database import Base
 from application.models import TimeStampMixin
@@ -70,3 +72,32 @@ class Recipe(Base, TimeStampMixin):
     @classmethod
     def image_path(cls, request: Request) -> Label:
         return concat(f"{request.base_url}{MEDIA_URL}/", cls.image).label("image")
+
+    @classmethod
+    def json_agg(cls, request: Request, recipes_limit: int) -> Label[Any]:
+        """
+        Получить список ререптов от каждого пользователя.
+
+        .. code-block:: python
+
+        select(Your_model.id, Recipe.json_agg(request, recipes_limit))
+        """
+        build: list[tuple[str, Any]] = [
+            "id",
+            cls.id,
+            "name",
+            cls.name,
+            "image",
+            cls.image_path(request),
+            "cooking_time",
+            cls.cooking_time,
+        ]
+        return case(
+            (
+                func.count(cls.id) != 0,
+                func.array_agg(
+                    aggregate_order_by(func.json_build_object(*build), cls.pub_date.desc(), cls.created_at.desc()),
+                )[0:recipes_limit]
+            ),
+            else_=None,
+        ).label("recipes")

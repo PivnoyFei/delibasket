@@ -1,6 +1,8 @@
 from fastapi import Form
 from pydantic import BaseModel
 
+from application.schemas import BaseSchema
+
 
 class TagCreate(BaseModel):
     name: str = Form(..., description="Название")
@@ -25,11 +27,7 @@ class TagUpdate(BaseModel):
     address: str | None = None
 
 
-class TagOut(BaseModel):
-    id: int
+class TagOut(BaseSchema):
     name: str
     color: str
     slug: str
-
-    class Config:
-        from_attributes = True

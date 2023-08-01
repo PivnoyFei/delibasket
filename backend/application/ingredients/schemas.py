@@ -1,6 +1,8 @@
 from fastapi import Form
 from pydantic import BaseModel
 
+from application.schemas import BaseSchema
+
 
 class IngredientCreate(BaseModel):
     name: str = Form(..., description="Название")
@@ -21,10 +23,6 @@ class IngredientUpdate(BaseModel):
     measurement_unit: str | None = None
 
 
-class IngredientOut(BaseModel):
-    id: int
+class IngredientOut(BaseSchema):
     name: str
     measurement_unit: str
-
-    class Config:
-        from_attributes = True

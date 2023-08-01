@@ -9,7 +9,7 @@ from starlette.requests import Request
 
 from application.database import scoped_session
 from application.recipes.models import Recipe
-from application.schemas import SearchUser, SubscriptionsParams
+from application.schemas import SearchUser, SubParams
 from application.users.models import Follow, User
 from application.users.schemas import UserCreate, UserOut
 
@@ -95,46 +95,19 @@ class UserManager:
 
 
 class FollowManager:
-    async def is_subscribed(self, session: AsyncSession, user_id: int, author_id: int) -> Any:
-        query = await session.execute(
-            select(Follow).where(Follow.user_id == user_id, Follow.author_id == author_id)
-        )
-        return query.fetchone()
-
-    async def count_is_subscribed(self, user_id: int) -> int:
-        async with scoped_session() as session:
-            count = await session.execute(
-                select(func.count(User.id).label("is_count"))
-                .join_from(Follow, User, User.id == Follow.author_id)
-                .where(Follow.user_id == user_id, User.is_active == True)
-            )
-            return count.one()[0] if count else 0
-
-    @staticmethod
-    async def recipe_by_author(
-        session: AsyncSession,
-        request: Request,
-        author_id: int,
-        params: SubscriptionsParams,
-    ) -> list:
-        query = (
-            select(Recipe.id, Recipe.name, Recipe.image_path(request), Recipe.cooking_time)
-            .where(Recipe.author_id == author_id)
-            .order_by(Recipe.pub_date.desc(), Recipe.created_at.desc())
-            .limit(params.recipes_limit)
-        )
-        query = await session.execute(query)
-        return query.all()
-
-    async def is_subscribed_all(
-        self, request: Request, params: SubscriptionsParams
-    ) -> tuple[int, list]:
+    async def is_subscribed(self, request: Request, params: SubParams) -> tuple[int, list]:
         async with scoped_session() as session:
             user_id: int = request.user.id
             count = await params.count(User)
-            query = select(
-                *User.list_columns("id", "email", "username", "first_name", "last_name"),
-                case((Follow.user_id == user_id, 'True'), else_='False').label("is_subscribed"),
+            query = (
+                select(
+                    *User.list_columns("id", "email", "username", "first_name", "last_name"),
+                    case((Follow.user_id == user_id, 'True'), else_='False').label("is_subscribed"),
+                    Recipe.json_agg(request, params.recipes_limit).label("recipes"),
+                )
+                .join(Recipe, Recipe.author_id == User.id)
+                .group_by(User.id, Follow.user_id)
+                .order_by(User.username)
             )
             count, query = [
                 i.join(Follow, User.id == Follow.author_id).where(
@@ -146,16 +119,8 @@ class FollowManager:
             if not count:
                 return 0, []
 
-            query = await session.execute(await params.limit_offset(query))
-            results = await params.to_dict(query.all())
-
-            for user in results:
-                recipes = await self.recipe_by_author(session, request, user["id"], params)
-                if recipes:
-                    user["recipes"] = recipes
-                    user["recipes_count"] = len(recipes)
-
-            return count, results
+            query = await session.execute(query)
+            return count, await params.to_dict(query.all())
 
     async def create(self, user_id: int, author_id: int) -> bool:
         async with scoped_session() as session:
