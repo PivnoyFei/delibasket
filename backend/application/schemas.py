@@ -60,9 +60,6 @@ class SubParams(Params):
         description="Количество объектов внутри поля recipes.",
     )
 
-    async def limit_offset(self, query: Select) -> Select:
-        return query.limit(self.recipes_limit)
-
     async def to_dict(self, results: list) -> list:
         return [
             {

@@ -7,3 +7,9 @@ services:
     volumes:
       - ../backend:/srv/www/app/
       - media_value:/srv/www/app/application/media
+
+  frontend:
+    container_name: frontend
+    build:
+     context: ../frontend
+     dockerfile: Dockerfile

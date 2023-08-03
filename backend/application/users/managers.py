@@ -1,10 +1,8 @@
 from datetime import datetime
-from typing import Any
 
 from asyncpg import UniqueViolationError
-from sqlalchemy import case, delete, insert, select, update
+from sqlalchemy import case, delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import func
 from starlette.requests import Request
 
 from application.database import scoped_session
@@ -15,18 +13,13 @@ from application.users.schemas import UserCreate, UserOut
 
 
 class UserManager:
-    async def get_all(self, params: SearchUser, pk: int | None = None) -> tuple[int, list]:
+    async def get_all(self, params: SearchUser, user_id: int | None = None) -> tuple[int, list]:
         async with scoped_session() as session:
             count = await params.count(User)
-            query = (
-                select(
-                    *User.list_columns("id", "email", "username", "first_name", "last_name"),
-                    Follow.is_subscribed(pk),
-                )
-                .join(Follow, User.id == Follow.author_id, isouter=True)
-                .where(User.is_active == True)
-                .order_by(User.id)
-            )
+            query = select(
+                *User.list_columns("id", "email", "username", "first_name", "last_name"),
+                Follow.is_subscribed(User.id, user_id),
+            ).where(User.is_active == True)
             count, query = [await params.search(i) for i in (count, query)]
             query = await session.execute(await params.limit_offset(query))
             return await session.scalar(count), query.all()
@@ -44,20 +37,22 @@ class UserManager:
             return await session.scalar(select(User).where(User.email == email))
 
     @staticmethod
-    async def session_by_id(session: AsyncSession, pk: int, user_id: int | None = None) -> UserOut:
+    async def session_by_id(
+        session: AsyncSession,
+        author_id: int,
+        user_id: int | None = None,
+    ) -> UserOut:
         query = await session.execute(
             select(
                 *User.list_columns("id", "email", "username", "first_name", "last_name"),
-                Follow.is_subscribed(pk, user_id),
-            )
-            .join(Follow, User.id == Follow.author_id, isouter=True)
-            .where(User.id == pk)
+                Follow.is_subscribed(author_id, user_id),
+            ).where(User.id == author_id)
         )
         return query.one_or_none()
 
-    async def by_id(self, pk: int, user_id: int | None = None) -> UserOut:
+    async def by_id(self, author_id: int, user_id: int | None = None) -> UserOut:
         async with scoped_session() as session:
-            return await self.session_by_id(session, pk, user_id)
+            return await self.session_by_id(session, author_id, user_id)
 
     async def create(self, user_in: UserCreate) -> User:
         async with scoped_session() as session:
@@ -103,7 +98,7 @@ class FollowManager:
                 select(
                     *User.list_columns("id", "email", "username", "first_name", "last_name"),
                     case((Follow.user_id == user_id, 'True'), else_='False').label("is_subscribed"),
-                    Recipe.json_agg(request, params.recipes_limit).label("recipes"),
+                    Recipe.json_agg_limit(request, params.recipes_limit).label("recipes"),
                 )
                 .join(Recipe, Recipe.author_id == User.id)
                 .group_by(User.id, Follow.user_id)
@@ -122,20 +117,21 @@ class FollowManager:
             query = await session.execute(query)
             return count, await params.to_dict(query.all())
 
-    async def create(self, user_id: int, author_id: int) -> bool:
+    async def create(self, author_id: int, user_id: int) -> bool:
         async with scoped_session() as session:
             try:
-                await session.execute(insert(Follow).values(user_id=user_id, author_id=author_id))
+                await session.execute(insert(Follow).values(author_id=author_id, user_id=user_id))
                 await session.commit()
                 return True
-            except UniqueViolationError:
+            except UniqueViolationError as e:
+                print(f"== FollowManager == create == {e}")
                 return False
 
-    async def delete(self, user_id: int, author_id: int) -> bool | None:
+    async def delete(self, author_id: int, user_id: int) -> bool | None:
         async with scoped_session() as session:
             try:
                 await session.execute(
-                    delete(Follow).where(Follow.user_id == user_id, Follow.author_id == author_id)
+                    delete(Follow).where(Follow.author_id == author_id, Follow.user_id == user_id)
                 )
                 await session.commit()
                 return True

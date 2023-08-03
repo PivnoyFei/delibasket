@@ -10,7 +10,7 @@ class IngredientCreate(BaseModel):
 
     class Config:
         str_strip_whitespace = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "Капуста",
                 "measurement_unit": "кг",

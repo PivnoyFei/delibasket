@@ -21,7 +21,7 @@ class UserCreate(BaseModel):
 
     class Config:
         str_strip_whitespace = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "email": "vpupkin@delibasket.ru",
                 "username": "vasyapupkin",

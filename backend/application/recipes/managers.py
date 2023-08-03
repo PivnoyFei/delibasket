@@ -15,7 +15,7 @@ from application.recipes.schemas import CreateRecipe, FavoriteOut, RecipeOut, Up
 from application.schemas import SearchRecipe
 from application.tags.models import Tag, recipe_tag
 from application.users.managers import UserManager
-from application.users.models import User
+from application.users.models import Follow, User
 
 
 class RecipeManager:
@@ -26,6 +26,30 @@ class RecipeManager:
     @staticmethod
     async def _create_amount_ingredient(session: AsyncSession, ingredients: list) -> Result:
         return await session.execute(insert(AmountIngredient).values(ingredients))
+    
+    @staticmethod
+    async def session_is_favorited(
+        session: AsyncSession,
+        recipe_id: int,
+        user_id: int,
+    ) -> int | None:
+        query = await session.execute(
+            select(Favorite.id).where(
+                Favorite.recipe_id == recipe_id,
+                Favorite.user_id == user_id,
+            )
+        )
+        return query.one_or_none()
+
+    @staticmethod
+    async def session_is_cart(session: AsyncSession, recipe_id: int, user_id: int) -> int | None:
+        query = await session.execute(
+            select(Cart.id).where(
+                Cart.recipe_id == recipe_id,
+                Cart.user_id == user_id,
+            )
+        )
+        return query.one_or_none()
 
     async def create(self, items: dict, recipe_in: CreateRecipe) -> int | None:
         async with scoped_session() as session:
@@ -87,11 +111,12 @@ class RecipeManager:
                     Recipe.author_id.label("author"),
                     Tag.json_agg("id", "name", "color", "slug").label("tags"),
                 )
-                .where(Recipe.id == pk)
                 .join(Recipe.tags, isouter=True)
+                .where(Recipe.id == pk)
                 .group_by(Recipe.id)
             )
             recipe = query.one_or_none()
+
             if not recipe:
                 return recipe
 
@@ -102,30 +127,6 @@ class RecipeManager:
                 is_favorited=await self.session_is_favorited(session, recipe.id, user_id),
                 is_in_shopping_cart=await self.session_is_cart(session, recipe.id, user_id),
             )
-
-    @staticmethod
-    async def session_is_favorited(
-        session: AsyncSession,
-        recipe_id: int,
-        user_id: int,
-    ) -> int | None:
-        query = await session.execute(
-            select(Favorite.id).where(
-                Favorite.recipe_id == recipe_id,
-                Favorite.user_id == user_id,
-            )
-        )
-        return query.one_or_none()
-
-    @staticmethod
-    async def session_is_cart(session: AsyncSession, recipe_id: int, user_id: int) -> int | None:
-        query = await session.execute(
-            select(Cart.id).where(
-                Cart.recipe_id == recipe_id,
-                Cart.user_id == user_id,
-            )
-        )
-        return query.one_or_none()
 
     async def get_all(self, request: Request, params: SearchRecipe) -> tuple[int, list]:
         async with scoped_session() as session:

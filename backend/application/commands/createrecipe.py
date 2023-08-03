@@ -20,16 +20,11 @@ from application.tags.models import recipe_tag
 
 async def async_main() -> None:
     engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, echo=True)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
     async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
     async with async_session() as session:
         for _ in range(1, 101):
-            letters = string.ascii_lowercase
-            name = ''.join(random.choice(letters) for i in range(20))
+            name = ''.join(random.choice(string.ascii_lowercase) for i in range(20))
             recipe = {
                 "author_id": 1,
                 "name": name,

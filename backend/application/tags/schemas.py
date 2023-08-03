@@ -11,7 +11,7 @@ class TagCreate(BaseModel):
 
     class Config:
         str_strip_whitespace = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "Завтрак",
                 "color": "E26C2D",

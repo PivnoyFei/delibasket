@@ -1,3 +1,5 @@
+from typing import Any
+
 import bcrypt
 from sqlalchemy import (
     Boolean,
@@ -7,8 +9,9 @@ from sqlalchemy import (
     LargeBinary,
     String,
     UniqueConstraint,
-    and_,
     case,
+    func,
+    select,
 )
 from sqlalchemy.sql.expression import Label
 
@@ -41,19 +44,11 @@ class Follow(Base, TimeStampMixin):
     user_id = Column(Integer, ForeignKey("user.id", ondelete='CASCADE'))  # Подписался
 
     @classmethod
-    def is_subscribed(cls, pk: int | None = None, user_id: int | None = None) -> Label:
-        if user_id:
-            return case(
-                (
-                    and_(cls.user_id == user_id, cls.user_id != User.id),
-                    "True",
-                ),
-                else_="False",
-            ).label("is_subscribed")
-        return case(
-            (
-                and_(pk != None, cls.user_id == pk, cls.user_id != User.id),
-                "True",
-            ),
-            else_="False",
-        ).label("is_subscribed")
+    def is_subscribed(cls, author_id: int, user_id: int | None = None) -> Label | None:
+        if not author_id:
+            return None
+
+        sub = select(func.count(cls.id).label("is_subscribed")).where(
+            cls.user_id == user_id, cls.author_id == author_id
+        )
+        return case((sub.c.is_subscribed != 0, "True"), else_="False").label("is_subscribed")

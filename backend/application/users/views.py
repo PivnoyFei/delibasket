@@ -103,9 +103,9 @@ async def get_user(request: Request, user_id: int) -> UserOut | JSONResponse:
 async def create_subscribe(request: Request, user_id: int) -> JSONResponse:
     """Подписаться на пользователя. Доступно только авторизованным пользователям."""
     if user_id != request.user.id:
-        if not await UserManager().by_id(user_id):
+        if not await UserManager().by_id(user_id, request.user.id):
             raise NotFoundException
-        if await FollowManager().create(request.user.id, user_id):
+        if await FollowManager().create(user_id, request.user.id):
             return JSONResponse({"detail": "Подписка успешно создана"}, HTTP_201_CREATED)
 
     raise BadRequestException("Ошибка уже подписан.")
@@ -118,7 +118,7 @@ async def create_subscribe(request: Request, user_id: int) -> JSONResponse:
 )
 async def delete_subscribe(request: Request, user_id: int) -> JSONResponse:
     """Отписаться от пользователя. Доступно только авторизованным пользователям."""
-    if await FollowManager().delete(request.user.id, user_id):
+    if await FollowManager().delete(user_id, request.user.id):
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     raise BadRequestException("Ошибка отписки (Например, если не был подписан).")

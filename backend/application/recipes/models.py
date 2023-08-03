@@ -1,4 +1,5 @@
 from typing import Any
+
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -9,12 +10,12 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import and_, case, func
 from sqlalchemy.sql.expression import Label
 from sqlalchemy.sql.functions import concat
 from starlette.requests import Request
-from sqlalchemy.dialects.postgresql import aggregate_order_by
 
 from application.database import Base
 from application.models import TimeStampMixin
@@ -74,7 +75,7 @@ class Recipe(Base, TimeStampMixin):
         return concat(f"{request.base_url}{MEDIA_URL}/", cls.image).label("image")
 
     @classmethod
-    def json_agg(cls, request: Request, recipes_limit: int) -> Label[Any]:
+    def json_agg_limit(cls, request: Request, recipes_limit: int) -> Label[Any]:
         """
         Получить список ререптов от каждого пользователя.
 
@@ -96,8 +97,12 @@ class Recipe(Base, TimeStampMixin):
             (
                 func.count(cls.id) != 0,
                 func.array_agg(
-                    aggregate_order_by(func.json_build_object(*build), cls.pub_date.desc(), cls.created_at.desc()),
-                )[0:recipes_limit]
+                    aggregate_order_by(
+                        func.json_build_object(*build),
+                        cls.pub_date.desc(),
+                        cls.created_at.desc(),
+                    ),
+                )[0:recipes_limit],
             ),
             else_=None,
         ).label("recipes")
