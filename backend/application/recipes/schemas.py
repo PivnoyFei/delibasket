@@ -89,47 +89,12 @@ class UpdateRecipe(BaseRecipe):
         return result
 
 
-class RecipeAllOut(BaseSchema):
-    name: str
-    image: str
-    tags: list[TagOut]
-    author: UserOut
-    text: str
-    cooking_time: int
-    is_favorited: bool = False
-    is_in_shopping_cart: bool = False
-
-    @staticmethod
-    async def to_dict(
-        recipe: "RecipeAllOut",
-        is_favorited: Optional[int] = False,
-        is_in_shopping_cart: Optional[int] = False,
-    ) -> dict[str, Any]:
-        """сложные запросы двойное соединение `Favorite` и `Cart` к `User` создает ошибку."""
-        if not isinstance(is_favorited, bool):
-            is_favorited = True if is_favorited else False
-        if not isinstance(is_in_shopping_cart, bool):
-            is_in_shopping_cart = True if is_in_shopping_cart else False
-
-        return {
-            "id": recipe.id,
-            "name": recipe.name,
-            "image": recipe.image,
-            "tags": await TagOut.tuple_to_dict(recipe.tags),
-            "author": recipe.author,
-            "text": recipe.text,
-            "cooking_time": recipe.cooking_time,
-            "is_favorited": is_favorited,
-            "is_in_shopping_cart": is_in_shopping_cart,
-        }
-
-
 class RecipeOut(BaseSchema):
     name: str
     image: str
     tags: list[TagOut]
     author: UserOut
-    ingredients: list[AmountOut]
+    ingredients: list[AmountOut] | None = None
     text: str
     cooking_time: int
     is_favorited: bool = False
@@ -154,7 +119,9 @@ class RecipeOut(BaseSchema):
             "image": recipe.image,
             "tags": await TagOut.tuple_to_dict(recipe.tags),
             "author": author if author else recipe.author,
-            "ingredients": await AmountOut.tuple_to_dict(recipe.ingredients),
+            "ingredients": await AmountOut.tuple_to_dict(recipe.ingredients)
+            if getattr(recipe, "ingredients", None)
+            else None,
             "text": recipe.text,
             "cooking_time": recipe.cooking_time,
             "is_favorited": is_favorited,

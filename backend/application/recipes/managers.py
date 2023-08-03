@@ -10,13 +10,7 @@ from application.database import scoped_session
 from application.ingredients.models import AmountIngredient, Ingredient
 from application.managers import BaseManager
 from application.recipes.models import Cart, Favorite, Recipe
-from application.recipes.schemas import (
-    CreateRecipe,
-    FavoriteOut,
-    RecipeAllOut,
-    RecipeOut,
-    UpdateRecipe,
-)
+from application.recipes.schemas import CreateRecipe, FavoriteOut, RecipeOut, UpdateRecipe
 from application.schemas import SearchRecipe
 from application.tags.models import Tag, recipe_tag
 from application.users.managers import UserManager
@@ -198,7 +192,7 @@ class RecipeManager:
 
             query = await session.execute(query)
             all_recipe = [
-                await RecipeAllOut.to_dict(  # TODO описание проблемы внутри
+                await RecipeOut.to_dict(  # TODO описание проблемы внутри
                     recipe,
                     is_favorited=await self.session_is_favorited(session, recipe.id, user_id),
                     is_in_shopping_cart=await self.session_is_cart(session, recipe.id, user_id),
