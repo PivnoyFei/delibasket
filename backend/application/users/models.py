@@ -1,5 +1,3 @@
-from typing import Any
-
 import bcrypt
 from sqlalchemy import (
     Boolean,

@@ -7,15 +7,20 @@ from sqlalchemy.sql import func
 from starlette.requests import Request
 
 from application.database import scoped_session
-from application.ingredients.managers import AmountManager
 from application.ingredients.models import AmountIngredient, Ingredient
 from application.managers import BaseManager
 from application.recipes.models import Cart, Favorite, Recipe
-from application.recipes.schemas import CreateRecipe, FavoriteOut, RecipeOut, UpdateRecipe
+from application.recipes.schemas import (
+    CreateRecipe,
+    FavoriteOut,
+    RecipeAllOut,
+    RecipeOut,
+    UpdateRecipe,
+)
 from application.schemas import SearchRecipe
 from application.tags.models import Tag, recipe_tag
 from application.users.managers import UserManager
-from application.users.models import Follow, User
+from application.users.models import User
 
 
 class RecipeManager:
@@ -26,7 +31,7 @@ class RecipeManager:
     @staticmethod
     async def _create_amount_ingredient(session: AsyncSession, ingredients: list) -> Result:
         return await session.execute(insert(AmountIngredient).values(ingredients))
-    
+
     @staticmethod
     async def session_is_favorited(
         session: AsyncSession,
@@ -109,8 +114,16 @@ class RecipeManager:
                     *Recipe.list_columns("id", "name", "text", "cooking_time"),
                     Recipe.image_path(request),
                     Recipe.author_id.label("author"),
-                    Tag.json_agg("id", "name", "color", "slug").label("tags"),
+                    Tag.array_agg("id", "name", "color", "slug").label("tags"),
+                    AmountIngredient.array_agg(
+                        Ingredient.id,
+                        Ingredient.name,
+                        Ingredient.measurement_unit,
+                        AmountIngredient.amount,
+                    ).label("ingredients"),
                 )
+                .join(Recipe.amount)
+                .join(AmountIngredient.ingredient)
                 .join(Recipe.tags, isouter=True)
                 .where(Recipe.id == pk)
                 .group_by(Recipe.id)
@@ -122,7 +135,6 @@ class RecipeManager:
 
             return await RecipeOut.to_dict(  # TODO описание проблемы внутри
                 recipe,
-                ingredients=await AmountManager.get_amount(session, recipe.id),
                 author=await UserManager.session_by_id(session, recipe.author, user_id),
                 is_favorited=await self.session_is_favorited(session, recipe.id, user_id),
                 is_in_shopping_cart=await self.session_is_cart(session, recipe.id, user_id),
@@ -142,7 +154,7 @@ class RecipeManager:
                         "first_name",
                         "last_name",
                     ).label("author"),
-                    Tag.json_agg("id", "name", "color", "slug").label("tags"),
+                    Tag.array_agg("id", "name", "color", "slug").label("tags"),
                 )
                 .join(Recipe.author)
                 .group_by(Recipe.id, User.id)
@@ -186,9 +198,8 @@ class RecipeManager:
 
             query = await session.execute(query)
             all_recipe = [
-                await RecipeOut.to_dict(  # TODO описание проблемы внутри
+                await RecipeAllOut.to_dict(  # TODO описание проблемы внутри
                     recipe,
-                    ingredients=await AmountManager.get_amount(session, recipe.id),
                     is_favorited=await self.session_is_favorited(session, recipe.id, user_id),
                     is_in_shopping_cart=await self.session_is_cart(session, recipe.id, user_id),
                 )

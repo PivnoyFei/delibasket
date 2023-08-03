@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from asyncpg import UniqueViolationError
-from sqlalchemy import case, delete, func, insert, select, update
+from sqlalchemy import case, delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -98,7 +98,7 @@ class FollowManager:
                 select(
                     *User.list_columns("id", "email", "username", "first_name", "last_name"),
                     case((Follow.user_id == user_id, 'True'), else_='False').label("is_subscribed"),
-                    Recipe.json_agg_limit(request, params.recipes_limit).label("recipes"),
+                    Recipe.json_agg_recipes_limit(request, params.recipes_limit),
                 )
                 .join(Recipe, Recipe.author_id == User.id)
                 .group_by(User.id, Follow.user_id)

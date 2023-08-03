@@ -13,6 +13,13 @@ from application.users.schemas import UserOut
 class AmountOut(IngredientOut):
     amount: int
 
+    @staticmethod
+    async def tuple_to_dict(ingredients: tuple) -> dict[str, Any]:
+        return [
+            {"id": pk, "name": name, "measurement_unit": measurement_unit, "amount": amount}
+            for pk, name, measurement_unit, amount in ingredients
+        ]
+
 
 class CreateAmountIngredient(BaseModel):
     id: int = 0
@@ -82,6 +89,41 @@ class UpdateRecipe(BaseRecipe):
         return result
 
 
+class RecipeAllOut(BaseSchema):
+    name: str
+    image: str
+    tags: list[TagOut]
+    author: UserOut
+    text: str
+    cooking_time: int
+    is_favorited: bool = False
+    is_in_shopping_cart: bool = False
+
+    @staticmethod
+    async def to_dict(
+        recipe: "RecipeAllOut",
+        is_favorited: Optional[int] = False,
+        is_in_shopping_cart: Optional[int] = False,
+    ) -> dict[str, Any]:
+        """сложные запросы двойное соединение `Favorite` и `Cart` к `User` создает ошибку."""
+        if not isinstance(is_favorited, bool):
+            is_favorited = True if is_favorited else False
+        if not isinstance(is_in_shopping_cart, bool):
+            is_in_shopping_cart = True if is_in_shopping_cart else False
+
+        return {
+            "id": recipe.id,
+            "name": recipe.name,
+            "image": recipe.image,
+            "tags": await TagOut.tuple_to_dict(recipe.tags),
+            "author": recipe.author,
+            "text": recipe.text,
+            "cooking_time": recipe.cooking_time,
+            "is_favorited": is_favorited,
+            "is_in_shopping_cart": is_in_shopping_cart,
+        }
+
+
 class RecipeOut(BaseSchema):
     name: str
     image: str
@@ -95,26 +137,24 @@ class RecipeOut(BaseSchema):
 
     @staticmethod
     async def to_dict(
-        recipe: Recipe,
-        ingredients: list,
+        recipe: "RecipeOut",
         author: UserOut | None = None,
         is_favorited: Optional[int] = False,
         is_in_shopping_cart: Optional[int] = False,
     ) -> dict[str, Any]:
-        """сложные запросы двойное соединение `Favorite` и `Cart` к `User` создает ошибку.
-        author:
-        ingredients: пока так."""
+        """сложные запросы двойное соединение `Favorite` и `Cart` к `User` создает ошибку."""
         if not isinstance(is_favorited, bool):
             is_favorited = True if is_favorited else False
         if not isinstance(is_in_shopping_cart, bool):
             is_in_shopping_cart = True if is_in_shopping_cart else False
+
         return {
             "id": recipe.id,
             "name": recipe.name,
             "image": recipe.image,
-            "tags": recipe.tags,
+            "tags": await TagOut.tuple_to_dict(recipe.tags),
             "author": author if author else recipe.author,
-            "ingredients": ingredients,
+            "ingredients": await AmountOut.tuple_to_dict(recipe.ingredients),
             "text": recipe.text,
             "cooking_time": recipe.cooking_time,
             "is_favorited": is_favorited,

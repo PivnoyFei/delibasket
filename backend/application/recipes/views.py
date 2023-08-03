@@ -14,7 +14,7 @@ from application.exceptions import BadRequestException, NotFoundException
 from application.managers import Manager
 from application.recipes.managers import FavoriteCartManager, RecipeManager
 from application.recipes.models import Cart, Favorite, Recipe
-from application.recipes.schemas import CreateRecipe, RecipeOut, UpdateRecipe
+from application.recipes.schemas import CreateRecipe, RecipeAllOut, RecipeOut, UpdateRecipe
 from application.recipes.utils import base64_image
 from application.schemas import Result, SearchRecipe
 from application.services import image_delete
@@ -50,7 +50,7 @@ async def create_recipe(request: Request, recipe_in: CreateRecipe) -> JSONRespon
     raise NotFoundException
 
 
-@router.get("/", response_model=Result[RecipeOut], status_code=HTTP_200_OK)
+@router.get("/", response_model=Result[RecipeAllOut], status_code=HTTP_200_OK)
 async def get_recipes(request: Request, params: SearchRecipe = Depends()) -> JSONResponse:
     """Список рецептов.<br>
     Страница доступна всем пользователям.<br>
@@ -122,6 +122,7 @@ async def download_shopping_cart(request: Request) -> FileResponse | JSONRespons
 async def get_recipe(request: Request, recipe_id: int) -> Any:
     """Получение рецепта."""
     if result := await RecipeManager().get(request, recipe_id):
+        print('===result===', result)
         return result
     raise NotFoundException
 

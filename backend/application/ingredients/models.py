@@ -1,4 +1,5 @@
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy.orm import relationship
 
 from application.database import Base
 from application.models import TimeStampMixin
@@ -19,6 +20,9 @@ class AmountIngredient(Base, TimeStampMixin):
     )
 
     id = Column(Integer, primary_key=True)
-    recipe_id = Column(Integer, ForeignKey("recipe.id", ondelete='CASCADE'))
-    ingredient_id = Column(Integer, ForeignKey("ingredient.id", ondelete='CASCADE'))
     amount = Column(Integer)
+
+    recipe_id = Column(Integer, ForeignKey("recipe.id", ondelete='CASCADE'))
+
+    ingredient_id = Column(Integer, ForeignKey("ingredient.id", ondelete='CASCADE'))
+    ingredient = relationship(Ingredient)

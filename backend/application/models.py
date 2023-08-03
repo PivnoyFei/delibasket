@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Column, DateTime, case, func
-from sqlalchemy.sql.expression import Case
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql.expression import Case, Label
+from sqlalchemy.types import NullType
 
 
 class TimeStampMixin:
@@ -13,20 +15,29 @@ class TimeStampMixin:
     def list_columns(cls, *args: str) -> list[Any]:
         """
         Получить список всех или некоторых колонок таблицы.
+        используйте `join` или `relationship` для сторонних моделей.
 
         .. code-block:: python
 
-        select(*Your_model.list_columns("your_attr"), Your_other_model.id)
+        select(*Your_model.list_columns("your_attr", Your_model.your_attr), Your_other_model.id)
         """
         if args:
+            build: list[Any] = []
+
             for name in args:
-                if not isinstance(name, str):
-                    raise TypeError(f"атрибут {name} должен быть в формоте `str`")
+                if isinstance(name, str):
+                    if attr := getattr(cls, name, None):
+                        build.append(attr)
+                    else:
+                        raise AttributeError(f"класс {cls.__name__} не имеет атрибута {name}")
+                elif isinstance(name, (InstrumentedAttribute, Label)):
+                    build.append(name)
+                else:
+                    raise AttributeError(
+                        f"`{name}`: допускаются только `str, InstrumentedAttribute`"
+                    )
 
-                if not hasattr(cls, name):
-                    raise AttributeError(f"класс {cls.__name__} не имеет атрибута {name}")
-
-            return [getattr(cls, name) for name in args]
+            return build
 
         return [getattr(cls, c.name) for c in cls.__table__.columns]
 
@@ -79,3 +90,15 @@ class TimeStampMixin:
             ),
             else_=None,
         )
+
+    @classmethod
+    def array_agg(cls, *args: str) -> Case[Any]:
+        """
+        Получить список всех или некоторых колонок таблицы.
+        используйте `join` или `relationship` для сторонних моделей.
+
+        .. code-block:: python
+
+        select(Your_model.id, Your_model.array_agg("your_attr", Your_model.your_attr)
+        """
+        return func.array_agg(func.distinct(*cls.list_columns(*args)), type_=NullType)

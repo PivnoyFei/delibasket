@@ -22,6 +22,8 @@ from application.models import TimeStampMixin
 from application.settings import MEDIA_URL
 from application.users.models import User
 
+# from application.ingredients.models import AmountIngredient
+
 
 class Favorite(Base, TimeStampMixin):
     __table_args__ = (UniqueConstraint('user_id', 'recipe_id'),)
@@ -69,19 +71,20 @@ class Recipe(Base, TimeStampMixin):
     tags = relationship("Tag", secondary="recipe_tag")
     favorites = relationship(Favorite)
     carts = relationship(Cart)
+    amount = relationship("AmountIngredient")
 
     @classmethod
     def image_path(cls, request: Request) -> Label:
         return concat(f"{request.base_url}{MEDIA_URL}/", cls.image).label("image")
 
     @classmethod
-    def json_agg_limit(cls, request: Request, recipes_limit: int) -> Label[Any]:
+    def json_agg_recipes_limit(cls, request: Request, recipes_limit: int) -> Label[Any]:
         """
         Получить список ререптов от каждого пользователя.
 
         .. code-block:: python
 
-        select(Your_model.id, Recipe.json_agg(request, recipes_limit))
+        select(Your_model.id, Recipe.json_agg_recipes_limit(request, recipes_limit))
         """
         build: list[tuple[str, Any]] = [
             "id",

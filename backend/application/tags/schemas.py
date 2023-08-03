@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import Form
 from pydantic import BaseModel
 
@@ -31,3 +33,9 @@ class TagOut(BaseSchema):
     name: str
     color: str
     slug: str
+
+    @staticmethod
+    async def tuple_to_dict(tags: tuple) -> dict[str, Any]:
+        return [
+            {"id": pk, "name": name, "color": color, "slug": slug} for pk, name, color, slug in tags
+        ]
