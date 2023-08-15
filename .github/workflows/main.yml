@@ -11,13 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install python
-        uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2
+      - name: Check files using the black formatter
+      - uses: psf/black@stable
         with:
-          python-version: 3.11.0
-      - name: Install deps
-        run: pip install flake8 flake8-isort
-      - name: Run flake8
-        run: |
-          cd backend
-          flake8 .
+          options: ". --check --skip-string-normalization"

@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: double-quote-string-fixer
+      - id: mixed-line-ending
+      - id: end-of-file-fixer  # проверяет наличие переноса строки в конце всех текстовых файлов
+      - id: trailing-whitespace
+      - id: detect-private-key  # предотвращает сохранение приватных ключей
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        exclude: ^.*\b(alembic/.*|.venv/.*)\b.*$
+
+  - repo: https://github.com/psf/black
+    rev: 22.12.0
+    hooks:
+      - id: black
+        args: [ --skip-string-normalization ]
+        exclude: ^.*\b(alembic/.*|.venv/.*)\b.*$

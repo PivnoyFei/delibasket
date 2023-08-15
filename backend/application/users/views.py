@@ -8,6 +8,8 @@ from application.exceptions import BadRequestException, NotFoundException
 from application.schemas import Result, SearchUser, SubParams
 from application.users.managers import FollowManager, UserManager
 from application.users.schemas import FollowOut, SetPassword, UserCreate, UserOut
+from application.users.models import User
+from application.managers import Manager
 
 router = APIRouter()
 
@@ -42,7 +44,7 @@ async def create_user(user_in: UserCreate) -> UserOut:
 )
 async def me(request: Request) -> JSONResponse:
     """Текущий пользователь."""
-    return request.user
+    return await Manager(User).by_id(request.user.id)
 
 
 @router.get(
@@ -67,7 +69,8 @@ async def subscriptions(request: Request, params: SubParams = Depends()) -> dict
 async def set_password(request: Request, password_in: SetPassword) -> JSONResponse:
     """Изменение пароля пользователя.<br>
     Администратор может изменять пароль любого пользователя."""
-    if await request.user.check_password(password_in.current_password):
+    user: User = await Manager(User).by_id(request.user.id)
+    if user.check_password(password_in.current_password):
         if await UserManager().update(password_in.new_password, request.user.id):
             return Response(status_code=HTTP_204_NO_CONTENT)
 

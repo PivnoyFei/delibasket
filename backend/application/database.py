@@ -2,12 +2,14 @@ import re
 from asyncio import current_task
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, AsyncIterator
+from redis import Redis
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_scoped_session,
     async_sessionmaker,
     create_async_engine,
+    AsyncEngine,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import declared_attr
@@ -27,14 +29,22 @@ class CustomBase:
         return resolve_table_name(cls.__name__)
 
 
-engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
+engine: AsyncEngine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
 Base = declarative_base(cls=CustomBase)
-async_session: async_sessionmaker[AsyncSession] = async_sessionmaker(
+session: async_sessionmaker[AsyncSession] = async_sessionmaker(
     engine,
     expire_on_commit=False,
     class_=AsyncSession,
 )
-async_session = async_scoped_session(async_session, scopefunc=current_task)
+async_session: async_sessionmaker[AsyncSession] = async_scoped_session(
+    session,
+    scopefunc=current_task,
+)
+db_redis: Redis = Redis.from_url(
+    settings.REDIS_URL,
+    password=settings.REDIS_PASSWORD,
+    decode_responses=True,
+)
 
 
 @asynccontextmanager

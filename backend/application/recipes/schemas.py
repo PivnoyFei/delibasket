@@ -119,9 +119,11 @@ class RecipeOut(BaseSchema):
             "image": recipe.image,
             "tags": await TagOut.tuple_to_dict(recipe.tags),
             "author": author if author else recipe.author,
-            "ingredients": await AmountOut.tuple_to_dict(recipe.ingredients)
-            if getattr(recipe, "ingredients", None)
-            else None,
+            "ingredients": (
+                await AmountOut.tuple_to_dict(recipe.ingredients)
+                if getattr(recipe, "ingredients", None)
+                else None
+            ),
             "text": recipe.text,
             "cooking_time": recipe.cooking_time,
             "is_favorited": is_favorited,

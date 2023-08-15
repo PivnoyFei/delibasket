@@ -2,16 +2,27 @@ version: '3.7'
 
 services:
   delibasket-db:
-    container_name:  ${POSTGRES_SERVER}
+    container_name: ${POSTGRES_SERVER}
     image: postgres:13.0-alpine
     restart: always
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - postgres_data:/var/lib/postgresql/delibasket/
     command: -p ${POSTGRES_PORT}
     expose:
       - ${POSTGRES_PORT}
     env_file:
       - ./.env
+
+  delibasket-redis:
+    container_name: ${REDIS_HOST}
+    image: redis:latest
+    restart: always
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    volumes:
+      - redis_data:/var/lib/redis/delibasket/
+    command: >
+        --requirepass ${REDIS_PASSWORD}
 
   delibasket-backend:
     container_name: delibasket-backend
@@ -28,6 +39,7 @@ services:
       - 9988:8000
     depends_on:
       - delibasket-db
+      - delibasket-redis
 
   frontend:
     container_name: frontend
@@ -35,7 +47,7 @@ services:
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
-      - delibasket-db
+      - delibasket-backend
 
   nginx:
     image: nginx:1.21.3-alpine
@@ -53,3 +65,4 @@ services:
 volumes:
   media_value:
   postgres_data:
+  redis_data:

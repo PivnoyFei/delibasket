@@ -4,7 +4,7 @@ from typing import Optional
 from starlette.authentication import AuthenticationBackend
 from starlette.requests import HTTPConnection, Request
 
-from application.auth.managers import AuthTokenManager
+from application.auth.managers import AuthTokenRedisManager
 from application.auth.schemas import CurrentUser
 from application.exceptions import (
     BadRequestException,
@@ -33,8 +33,8 @@ class AuthBackend(AuthenticationBackend):
 
         return False, current_user
 
-    async def get_current_user(self, token: str) -> User | None:
-        user: User = await AuthTokenManager().check(token)
+    async def get_current_user(self, token: str) -> CurrentUser | None:
+        user: CurrentUser = await AuthTokenRedisManager().check(token)
         if user and not user.is_active:
             raise BadRequestException("Неактивный пользователь")
         return user

@@ -2,7 +2,7 @@ import os
 from datetime import timedelta
 from typing import Any
 
-from pydantic import AnyHttpUrl, PostgresDsn, model_validator
+from pydantic import AnyHttpUrl, PostgresDsn, RedisDsn, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str | None = "postgres"
     POSTGRES_SERVER: str | None = "delibasket-db"
     POSTGRES_PORT: int | None = 5432
+
+    REDIS_HOST: str | None = "delibasket-redis"
+    REDIS_PORT: int | None = 6379
+    REDIS_PASSWORD: str | None = "qwerty"
 
     TESTING: bool | None = None
 
@@ -35,6 +39,10 @@ class Settings(BaseSettings):
             f"{self.POSTGRES_PORT}/"
             f"{self.POSTGRES_NAME or ''}"
         )
+
+    @property
+    def REDIS_URL(self) -> RedisDsn:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
 
 
 settings: Settings = Settings()

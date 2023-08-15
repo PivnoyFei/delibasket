@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse, Response
 from starlette.requests import Request
 from starlette.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
-from application.auth.managers import AuthTokenManager
+from application.auth.managers import AuthTokenRedisManager
 from application.auth.permissions import IsAuthenticated, PermissionsDependency
 from application.auth.schemas import TokenBase, UserLogin
 from application.exceptions import BadRequestException
@@ -21,7 +21,8 @@ async def login(user_in: UserLogin) -> JSONResponse:
         raise BadRequestException("Неверный email")
     if not await user.check_password(user_in.password):
         raise BadRequestException("Неверный пароль")
-    return JSONResponse({"auth_token": await AuthTokenManager().create(user.id)}, HTTP_201_CREATED)
+    auth_token = await AuthTokenRedisManager().create(user)
+    return JSONResponse({"auth_token": auth_token}, HTTP_201_CREATED)
 
 
 @router.post(
@@ -31,5 +32,6 @@ async def login(user_in: UserLogin) -> JSONResponse:
 )
 async def logout(request: Request) -> Response:
     """Удаляет все токены текущего пользователя."""
-    if await AuthTokenManager().delete(request.user.id):
+    _, token = request.headers.get("Authorization").split(" ")
+    if await AuthTokenRedisManager().delete(token):
         return Response(status_code=HTTP_204_NO_CONTENT)

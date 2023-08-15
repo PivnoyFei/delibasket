@@ -11,7 +11,6 @@ from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from application.database import Base
 from application.ingredients.models import AmountIngredient
 from application.recipes.models import Recipe
 from application.settings import settings
