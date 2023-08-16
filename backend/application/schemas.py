@@ -13,8 +13,8 @@ from application.users.models import User
 name_str = "^([А-Яа-я]+|[A-Za-z]+)$"
 name_en_str = "^[A-Za-z]+$"
 
-_TS = TypeVar('_TS')
-_TM = TypeVar('_TM')
+_TS = TypeVar("_TS")
+_TM = TypeVar("_TM")
 
 
 class BaseSchema(BaseModel):

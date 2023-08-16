@@ -97,7 +97,7 @@ class FollowManager:
             query = (
                 select(
                     *User.list_columns("id", "email", "username", "first_name", "last_name"),
-                    case((Follow.user_id == user_id, 'True'), else_='False').label("is_subscribed"),
+                    case((Follow.user_id == user_id, "True"), else_="False").label("is_subscribed"),
                     Recipe.json_agg_recipes_limit(request, params.recipes_limit),
                 )
                 .join(Recipe, Recipe.author_id == User.id)

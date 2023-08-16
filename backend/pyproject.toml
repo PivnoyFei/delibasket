@@ -44,7 +44,6 @@ extend_skip_glob = ["docs/*", "*venv*/*"]
 
 [tool.black]
 line-length = 100
-skip-string-normalization = true
 extend-exclude = '(.*\/_version.py|.*venv.*\/|.*alembic.*\/.*)'
 
 [build-system]

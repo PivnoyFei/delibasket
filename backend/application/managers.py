@@ -7,8 +7,8 @@ from sqlalchemy import delete, insert, select, update
 from application.database import scoped_session
 from application.schemas import Params
 
-_TM = TypeVar('_TM')
-_TS = TypeVar('_TS', bound=Params)
+_TM = TypeVar("_TM")
+_TS = TypeVar("_TS", bound=Params)
 
 
 class BaseManager(Generic[_TM]):

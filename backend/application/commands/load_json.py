@@ -15,7 +15,7 @@ from application.ingredients.models import Ingredient
 from application.settings import DATA_ROOT, settings
 from application.tags.models import Tag
 
-_TM = TypeVar('_TM')
+_TM = TypeVar("_TM")
 
 
 async def async_main(filename: str, model: Sequence[_TM]) -> None:
@@ -24,7 +24,7 @@ async def async_main(filename: str, model: Sequence[_TM]) -> None:
 
     async with async_session() as session:
         try:
-            with open(os.path.join(DATA_ROOT, filename), encoding='utf-8') as file:
+            with open(os.path.join(DATA_ROOT, filename), encoding="utf-8") as file:
                 items = dict((item["name"], item) for item in json.load(file)).values()
                 for item in items:
                     try:
@@ -34,7 +34,7 @@ async def async_main(filename: str, model: Sequence[_TM]) -> None:
                         await session.rollback()
 
         except TypeError:
-            print(f'Файл {filename} отсутствует в каталоге data')
+            print(f"Файл {filename} отсутствует в каталоге data")
 
     await engine.dispose()
     print("== Успех! ==")
@@ -47,8 +47,8 @@ if len(data_load) > 1:
     if data in command_load:
         asyncio.run(async_main(data, command_load[data]))
     else:
-        print(f'Файл {data} отсутствует в каталоге data')
+        print(f"Файл {data} отсутствует в каталоге data")
 else:
     for k, v in command_load.items():
-        print(f'=== {k} ===')
+        print(f"=== {k} ===")
         asyncio.run(async_main(k, v))

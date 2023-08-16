@@ -93,23 +93,23 @@ async def download_shopping_cart(request: Request) -> FileResponse | JSONRespons
         for item in ingredients:
             if item not in ingredients_set:
                 ingredients_set[item.name] = {
-                    'amount': item.amount,
-                    'measurement_unit': item.measurement_unit,
+                    "amount": item.amount,
+                    "measurement_unit": item.measurement_unit,
                 }
             else:
-                ingredients_set[item.name]['amount'] += item.amount
+                ingredients_set[item.name]["amount"] += item.amount
 
         cart_list = [
-            '{} - {} {}.\n'.format(
+            "{} - {} {}.\n".format(
                 name,
-                ingredients_set[name]['amount'],
-                ingredients_set[name]['measurement_unit'],
+                ingredients_set[name]["amount"],
+                ingredients_set[name]["measurement_unit"],
             )
             for name in ingredients_set
         ]
-        file_path = os.path.join(FILES_ROOT, f'{request.user.username}.txt')
+        file_path = os.path.join(FILES_ROOT, f"{request.user.username}.txt")
         try:
-            async with aiofiles.open(file_path, 'w', encoding="utf-8") as buffer:
+            async with aiofiles.open(file_path, "w", encoding="utf-8") as buffer:
                 await buffer.write("".join(cart_list))
 
         except Exception:

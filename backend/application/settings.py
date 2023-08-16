@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     TESTING: bool | None = None
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def testing_db_connection(cls, data: dict[str, Any]) -> dict:
         if data.get("TESTING", None):
@@ -49,7 +49,7 @@ settings: Settings = Settings()
 
 BASE_DIR: str = os.path.dirname(os.path.abspath(__file__))
 
-MEDIA_URL: str = 'media'
+MEDIA_URL: str = "media"
 MEDIA_ROOT: str = os.path.join(BASE_DIR, MEDIA_URL)
 FILES_ROOT: str = os.path.join(MEDIA_ROOT, "files")
 DATA_ROOT: str = os.path.join(BASE_DIR, "data")

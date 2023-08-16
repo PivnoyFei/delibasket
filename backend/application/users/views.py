@@ -5,11 +5,11 @@ from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from application.auth.permissions import IsAdmin, IsAuthenticated, PermissionsDependency
 from application.exceptions import BadRequestException, NotFoundException
+from application.managers import Manager
 from application.schemas import Result, SearchUser, SubParams
 from application.users.managers import FollowManager, UserManager
-from application.users.schemas import FollowOut, SetPassword, UserCreate, UserOut
 from application.users.models import User
-from application.managers import Manager
+from application.users.schemas import FollowOut, SetPassword, UserCreate, UserOut
 
 router = APIRouter()
 

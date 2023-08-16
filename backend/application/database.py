@@ -2,14 +2,14 @@ import re
 from asyncio import current_task
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, AsyncIterator
-from redis import Redis
 
+from redis import Redis
 from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
     AsyncSession,
     async_scoped_session,
     async_sessionmaker,
     create_async_engine,
-    AsyncEngine,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import declared_attr
@@ -19,8 +19,8 @@ from application.settings import settings
 
 def resolve_table_name(name: str) -> str:
     """Resolves table names to their mapped names."""
-    names = re.split('(?=[A-Z])', name)
-    return '_'.join([x.lower() for x in names if x])
+    names = re.split("(?=[A-Z])", name)
+    return "_".join([x.lower() for x in names if x])
 
 
 class CustomBase:

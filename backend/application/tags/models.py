@@ -8,7 +8,7 @@ recipe_tag = Table(
     Base.metadata,
     Column("recipe_id", Integer, ForeignKey("recipe.id", ondelete="CASCADE")),
     Column("tag_id", Integer, ForeignKey("tag.id", ondelete="CASCADE")),
-    UniqueConstraint('recipe_id', 'tag_id', name='unique_for_recipe_tag'),
+    UniqueConstraint("recipe_id", "tag_id", name="unique_for_recipe_tag"),
 )
 
 

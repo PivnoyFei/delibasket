@@ -23,7 +23,7 @@ async def async_main() -> None:
 
     async with async_session() as session:
         for _ in range(1, 101):
-            name = ''.join(random.choice(string.ascii_lowercase) for i in range(20))
+            name = "".join(random.choice(string.ascii_lowercase) for i in range(20))
             recipe = {
                 "author_id": 1,
                 "name": name,

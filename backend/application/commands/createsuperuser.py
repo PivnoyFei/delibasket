@@ -92,7 +92,7 @@ async def async_main(a: Createsuperuser) -> None:
 
         except TypeError as e:
             await session.rollback()
-            print(f'email или username уже существует {e}')
+            print(f"email или username уже существует {e}")
 
     await engine.dispose()
 

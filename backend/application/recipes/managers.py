@@ -237,7 +237,7 @@ class FavoriteCartManager(BaseManager):
                     await session.commit()
                     return recipe.one_or_none()
                 except UniqueViolationError as e:
-                    print(f'== FavoriteCartManager == create == {e}')
+                    print(f"== FavoriteCartManager == create == {e}")
 
             return None
 
@@ -253,5 +253,5 @@ class FavoriteCartManager(BaseManager):
                 await session.commit()
                 return True
             except Exception as e:
-                print(f'== FavoriteCartManager == delete == {e}')
+                print(f"== FavoriteCartManager == delete == {e}")
                 return False

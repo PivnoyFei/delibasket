@@ -80,7 +80,7 @@ class SetPassword(BaseModel):
     current_password: str = Field(description="old password")
     new_password: str = Field(description="New Password")
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validator(self) -> "SetPassword":
         if self.current_password == self.new_password:
             raise BadRequestException("Incorrect password")

@@ -34,12 +34,12 @@ class User(Base, TimeStampMixin):
 
 
 class Follow(Base, TimeStampMixin):
-    __table_args__ = (UniqueConstraint('user_id', 'author_id'),)
+    __table_args__ = (UniqueConstraint("user_id", "author_id"),)
 
     id = Column(Integer, primary_key=True, index=True)
 
-    author_id = Column(Integer, ForeignKey("user.id", ondelete='CASCADE'))  # Подписались
-    user_id = Column(Integer, ForeignKey("user.id", ondelete='CASCADE'))  # Подписался
+    author_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))  # Подписались
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))  # Подписался
 
     @classmethod
     def is_subscribed(cls, author_id: int, user_id: int | None = None) -> Label | None:

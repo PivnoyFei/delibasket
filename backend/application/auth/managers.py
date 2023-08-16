@@ -1,5 +1,5 @@
-from uuid import uuid4
 from datetime import datetime, timedelta
+from uuid import uuid4
 
 from application.auth.schemas import CurrentUser
 from application.database import db_redis
@@ -17,7 +17,7 @@ class AuthTokenRedisManager:
         token = generate_uuid()
         db_redis.hset(
             token,
-            mapping = {
+            mapping={
                 "id": user.id,
                 "is_active": int(user.is_active),
                 "is_staff": int(user.is_staff),
