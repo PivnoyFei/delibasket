@@ -1,5 +1,5 @@
 files: ^backend/
-exclude: "^docs/|/alembic/|frontend/|.venv/"
+exclude: "^docs/|/alembic/|/data/|frontend/|.venv/"
 default_stages: [commit]
 
 repos:
@@ -18,10 +18,10 @@ repos:
     rev: 5.12.0
     hooks:
       - id: isort
-        exclude: ^.*\b(alembic|.venv|frontend)\b.*$
+        exclude: ^.*\b(alembic|.venv|data|frontend)\b.*$
 
   - repo: https://github.com/psf/black
     rev: 22.12.0
     hooks:
       - id: black
-        exclude: ^.*\b(alembic|.venv|frontend)\b.*$
+        exclude: ^.*\b(alembic|.venv|data|frontend)\b.*$

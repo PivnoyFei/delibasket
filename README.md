@@ -1,4 +1,4 @@
-[![Build Status](https://github.com/PivnoyFei/delibasket/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/PivnoyFei/delibasket/actions/workflows/main.yml)
+[![Build Status](https://github.com/PivnoyFei/delibasket/actions/workflows/pre-commit.yml/badge.svg?branch=main)](https://github.com/PivnoyFei/delibasket/actions/workflows/pre-commit.yml)
 
 <h1 align="center"><a target="_blank" href="">Электронная продуктовая корзина</a></h1>
 
@@ -33,7 +33,7 @@
 - добавлять/удалять/редактировать теги.
 
 
-### Стек: 
+### Стек:
 ![Python](https://img.shields.io/badge/Python-171515?style=flat-square&logo=Python)![3.11](https://img.shields.io/badge/3.11-blue?style=flat-square&logo=3.11)
 ![FastAPI](https://img.shields.io/badge/FastAPI-171515?style=flat-square&logo=FastAPI)![0.85.0](https://img.shields.io/badge/0.85.0-blue?style=flat-square&logo=0.85.0)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-171515?style=flat-square&logo=PostgreSQL)![13.0](https://img.shields.io/badge/13.0-blue?style=flat-square&logo=13.0)
@@ -52,15 +52,7 @@ git clone https://github.com/PivnoyFei/delibasket.git
 cd delibasket
 ```
 
-### Перед запуском сервера, в папке infra необходимо создать .env файл со своими данными.
-```bash
-POSTGRES_DB='postgres' # имя БД
-POSTGRES_USER='postgres' # логин для подключения к БД
-POSTGRES_PASSWORD='postgres' # пароль для подключения к БД
-POSTGRES_SERVER='delibasket-db' # название контейнера
-POSTGRES_PORT='5432' # порт для подключения к БД
-```
-
+### Перед запуском сервера, в папке infra необходимо создать `.env` на основе `.env.template` файл со своими данными.
 #### Переходим в папку с файлом docker-compose.yaml:
 ```bash
 cd infra
