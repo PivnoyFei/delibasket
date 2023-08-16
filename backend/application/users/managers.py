@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from asyncpg import UniqueViolationError
@@ -124,7 +125,7 @@ class FollowManager:
                 await session.commit()
                 return True
             except UniqueViolationError as e:
-                print(f"== FollowManager == create == {e}")
+                logging.error(e)
                 return False
 
     async def delete(self, author_id: int, user_id: int) -> bool | None:
@@ -136,5 +137,5 @@ class FollowManager:
                 await session.commit()
                 return True
             except Exception as e:
-                print(f"== FollowManager == delete == {e}")
+                logging.error(e)
                 return False

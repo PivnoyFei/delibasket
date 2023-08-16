@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Any
 
@@ -41,8 +42,9 @@ async def create_recipe(request: Request, recipe_in: CreateRecipe) -> JSONRespon
         items = await recipe_in.to_dict(request.user.id, filename)
         recipe_id = await RecipeManager().create(items, recipe_in)
 
-    except (Exception, UniqueViolationError):
+    except (Exception, UniqueViolationError) as e:
         await image_delete(image_path=image_path)
+        logging.error(e)
         raise BadRequestException("Ошибка создания рецепта")
 
     if recipe_id:
@@ -112,7 +114,8 @@ async def download_shopping_cart(request: Request) -> FileResponse | JSONRespons
             async with aiofiles.open(file_path, "w", encoding="utf-8") as buffer:
                 await buffer.write("".join(cart_list))
 
-        except Exception:
+        except Exception as e:
+            logging.error(e)
             raise BadRequestException("Не удалось загрузить корзину")
         return FileResponse(file_path, background=BackgroundTask(cleanup))
     raise NotFoundException
@@ -155,7 +158,7 @@ async def update_recipe(request: Request, recipe_id: int, recipe_in: UpdateRecip
                 return JSONResponse({"detail": "Рецепт успешно обновлен"}, HTTP_200_OK)
 
         except Exception as e:
-            print(f"== update_recipe == {e}")
+            logging.error(e)
             if recipe_in.image:
                 await image_delete(filename, image_path)
 

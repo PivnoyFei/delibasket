@@ -7,7 +7,7 @@ class UserLogin(BaseModel):
 
 
 class TokenBase(BaseModel):
-    auth_token: str = Field(...)
+    auth_token: str
 
 
 class CurrentUser(BaseModel):

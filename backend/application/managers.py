@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Generic, Sequence, TypeVar
 
@@ -44,7 +45,7 @@ class Manager(BaseManager):
                 await session.commit()
                 return query.scalar()
         except UniqueViolationError as e:
-            print(f"== Manager == create == {e}")
+            logging.error(e)
             return None
 
     async def by_id(self, pk: int) -> _TM | None:
@@ -88,7 +89,7 @@ class Manager(BaseManager):
 
             except Exception as e:
                 await session.rollback()
-                print(f"== Manager == update == {e}")
+                logging.error(e)
                 return None
 
     async def delete(self, pk: int) -> bool:
@@ -99,5 +100,5 @@ class Manager(BaseManager):
                 return True
             except Exception as e:
                 await session.rollback()
-                print(f"== Manager == delete == {e}")
+                logging.error(e)
                 return False

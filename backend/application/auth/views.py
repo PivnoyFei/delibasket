@@ -21,6 +21,7 @@ async def login(user_in: UserLogin) -> JSONResponse:
         raise BadRequestException("Неверный email")
     if not await user.check_password(user_in.password):
         raise BadRequestException("Неверный пароль")
+
     auth_token = await AuthTokenRedisManager().create(user)
     return JSONResponse({"auth_token": auth_token}, HTTP_201_CREATED)
 

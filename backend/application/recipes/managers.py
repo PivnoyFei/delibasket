@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from asyncpg.exceptions import UniqueViolationError
@@ -65,7 +66,7 @@ class RecipeManager:
 
             except (UniqueViolationError, AttributeError) as e:
                 await session.rollback()
-                print(f"== RecipeManager == create == {e}")
+                logging.error(e)
                 return None
 
     async def update(self, pk: int, items: dict, recipe_in: UpdateRecipe) -> int | None:
@@ -92,7 +93,7 @@ class RecipeManager:
 
             except Exception as e:
                 await session.rollback()
-                print(f"== RecipeManager == update == {e}")
+                logging.error(e)
                 return None
 
     async def author_by_id(self, pk: int) -> int:
@@ -237,7 +238,7 @@ class FavoriteCartManager(BaseManager):
                     await session.commit()
                     return recipe.one_or_none()
                 except UniqueViolationError as e:
-                    print(f"== FavoriteCartManager == create == {e}")
+                    logging.error(e)
 
             return None
 
@@ -253,5 +254,5 @@ class FavoriteCartManager(BaseManager):
                 await session.commit()
                 return True
             except Exception as e:
-                print(f"== FavoriteCartManager == delete == {e}")
+                logging.error(e)
                 return False

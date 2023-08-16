@@ -1,9 +1,16 @@
+import logging
 import os
 from datetime import timedelta
 from typing import Any
 
 from pydantic import AnyHttpUrl, PostgresDsn, RedisDsn, model_validator
 from pydantic_settings import BaseSettings
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="=== %(levelname)s - %(pathname)s - %(funcName)s: %(lineno)d - %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 
 class Settings(BaseSettings):
