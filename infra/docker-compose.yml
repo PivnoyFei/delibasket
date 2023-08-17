@@ -12,6 +12,8 @@ services:
       - ${POSTGRES_PORT}
     env_file:
       - ./.env
+    networks:
+      - delibasket
 
   delibasket-redis:
     container_name: ${REDIS_HOST}
@@ -23,23 +25,26 @@ services:
       - redis_data:/var/lib/redis/delibasket/
     command: >
         --requirepass ${REDIS_PASSWORD}
+    networks:
+      - delibasket
 
   delibasket-backend:
     container_name: delibasket-backend
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
+    <<: &delibasket-backend
+      image: ${DOCKERHUB_USERNAME}/backend:latest
+      restart: always
+      networks:
+        - delibasket
+      env_file:
+        - ./.env
+      depends_on:
+        - delibasket-db
+        - delibasket-redis
     command: gunicorn application.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000
-    restart: always
     volumes:
       - media_value:/srv/www/app/application/media
-    env_file:
-      - ./.env
     ports:
       - 9988:8000
-    depends_on:
-      - delibasket-db
-      - delibasket-redis
 
   frontend:
     container_name: frontend
@@ -48,6 +53,8 @@ services:
       - ../frontend/:/app/result_build/
     depends_on:
       - delibasket-backend
+    networks:
+      - delibasket
 
   nginx:
     image: nginx:1.21.3-alpine
@@ -61,8 +68,13 @@ services:
     depends_on:
       - delibasket-backend
       - frontend
+    networks:
+      - delibasket
 
 volumes:
   media_value:
   postgres_data:
   redis_data:
+
+networks:
+  delibasket:

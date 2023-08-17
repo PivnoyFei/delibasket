@@ -1,8 +1,8 @@
 [![Build Status](https://github.com/PivnoyFei/delibasket/actions/workflows/pre-commit.yml/badge.svg?branch=main)](https://github.com/PivnoyFei/delibasket/actions/workflows/pre-commit.yml)
 
-<h1 align="center"><a target="_blank" href="">Электронная продуктовая корзина</a></h1>
+<h1 align="center">Delibasket</h1>
+<p align="center">Электронная продуктовая корзина.</p>
 
-## Описание
 Проект Delibasket, «Электронная продуктовая корзина». На этом сервисе пользователи смогут публиковать рецепты, подписываться на публикации других пользователей, добавлять понравившиеся рецепты в список «Избранное», а перед походом в магазин скачивать сводный список продуктов, необходимых для приготовления одного или нескольких выбранных блюд.
 
 ### Что могут делать неавторизованные пользователи

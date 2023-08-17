@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 from uuid import uuid4
 
 from application.auth.schemas import CurrentUser
