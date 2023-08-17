@@ -11,6 +11,8 @@ from application.schemas import Params
 _TM = TypeVar("_TM")
 _TS = TypeVar("_TS", bound=Params)
 
+logger = logging.getLogger(__name__)
+
 
 class BaseManager(Generic[_TM]):
     def __init__(self, model: _TM):
@@ -45,7 +47,7 @@ class Manager(BaseManager):
                 await session.commit()
                 return query.scalar()
         except UniqueViolationError as e:
-            logging.error(e)
+            logger.error(e)
             return None
 
     async def by_id(self, pk: int) -> _TM | None:
@@ -89,7 +91,7 @@ class Manager(BaseManager):
 
             except Exception as e:
                 await session.rollback()
-                logging.error(e)
+                logger.error(e)
                 return None
 
     async def delete(self, pk: int) -> bool:
@@ -100,5 +102,5 @@ class Manager(BaseManager):
                 return True
             except Exception as e:
                 await session.rollback()
-                logging.error(e)
+                logger.error(e)
                 return False

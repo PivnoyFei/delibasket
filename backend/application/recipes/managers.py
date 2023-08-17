@@ -17,6 +17,8 @@ from application.tags.models import Tag, recipe_tag
 from application.users.managers import UserManager
 from application.users.models import User
 
+logger = logging.getLogger(__name__)
+
 
 class RecipeManager:
     @staticmethod
@@ -66,7 +68,7 @@ class RecipeManager:
 
             except (UniqueViolationError, AttributeError) as e:
                 await session.rollback()
-                logging.error(e)
+                logger.error(e)
                 return None
 
     async def update(self, pk: int, items: dict, recipe_in: UpdateRecipe) -> int | None:
@@ -93,7 +95,7 @@ class RecipeManager:
 
             except Exception as e:
                 await session.rollback()
-                logging.error(e)
+                logger.error(e)
                 return None
 
     async def author_by_id(self, pk: int) -> int:
@@ -238,7 +240,7 @@ class FavoriteCartManager(BaseManager):
                     await session.commit()
                     return recipe.one_or_none()
                 except UniqueViolationError as e:
-                    logging.error(e)
+                    logger.error(e)
 
             return None
 
@@ -254,5 +256,5 @@ class FavoriteCartManager(BaseManager):
                 await session.commit()
                 return True
             except Exception as e:
-                logging.error(e)
+                logger.error(e)
                 return False

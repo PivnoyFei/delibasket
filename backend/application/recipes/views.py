@@ -21,6 +21,8 @@ from application.schemas import Result, SearchRecipe
 from application.services import image_delete
 from application.settings import FILES_ROOT
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 favorite = FavoriteCartManager(Favorite)
 cart = FavoriteCartManager(Cart)
@@ -44,7 +46,7 @@ async def create_recipe(request: Request, recipe_in: CreateRecipe) -> JSONRespon
 
     except (Exception, UniqueViolationError) as e:
         await image_delete(image_path=image_path)
-        logging.error(e)
+        logger.error(e)
         raise BadRequestException("Ошибка создания рецепта")
 
     if recipe_id:
@@ -115,7 +117,7 @@ async def download_shopping_cart(request: Request) -> FileResponse | JSONRespons
                 await buffer.write("".join(cart_list))
 
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
             raise BadRequestException("Не удалось загрузить корзину")
         return FileResponse(file_path, background=BackgroundTask(cleanup))
     raise NotFoundException
@@ -158,7 +160,7 @@ async def update_recipe(request: Request, recipe_id: int, recipe_in: UpdateRecip
                 return JSONResponse({"detail": "Рецепт успешно обновлен"}, HTTP_200_OK)
 
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
             if recipe_in.image:
                 await image_delete(filename, image_path)
 

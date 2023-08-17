@@ -68,11 +68,19 @@ def create_app() -> FastAPI:
     app_ = FastAPI(
         debug=False,
         title="DELIBASKET",
-        description=None,
+        description="Электронная продуктовая корзина",
         version="1.0.1",
         openapi_url=f"{settings.API_V1_STR}/docs/openapi.json",
         redoc_url=f"{settings.API_V1_STR}/docs",
         middleware=make_middleware(),
+        contact={
+            "name": "Смелов Илья",
+            "url": "https://github.com/PivnoyFei",
+        },
+        license_info={
+            "name": "BSD 3-Clause",
+            "url": "https://github.com/PivnoyFei/delibasket/blob/main/LICENSE",
+        },
     )
     init_routers(app_=app_)
     init_listeners(app_=app_)

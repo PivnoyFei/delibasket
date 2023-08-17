@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     REDIS_PORT: int | None = 6379
     REDIS_PASSWORD: str | None = "qwerty"
 
+    BACKEND_TOKEN_EXP: int | None = 10
+
     TESTING: bool | None = None
 
     @model_validator(mode="before")
@@ -51,6 +53,10 @@ class Settings(BaseSettings):
     def REDIS_URL(self) -> RedisDsn:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
 
+    @property
+    def TOKEN_EXP(self) -> timedelta:
+        return timedelta(seconds=self.BACKEND_TOKEN_EXP)
+
 
 settings: Settings = Settings()
 
@@ -65,5 +71,4 @@ ALLOWED_TYPES: tuple[str, str, str, str] = ("jpeg", "jpg", "png", "gif")
 INVALID_FILE: str = "Please upload a valid image."
 INVALID_TYPE: str = "The type of the image couldn't be determined."
 
-TOKEN_EXP: timedelta = timedelta(weeks=2)
 PAGINATION_SIZE: int = 6

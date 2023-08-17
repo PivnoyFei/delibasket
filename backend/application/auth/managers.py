@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from application.auth.schemas import CurrentUser
 from application.database import db_redis
-from application.settings import TOKEN_EXP
+from application.settings import settings
 from application.users.models import User
 
 
@@ -23,7 +23,7 @@ class AuthTokenRedisManager:
                 "is_superuser": int(user.is_superuser),
             },
         )
-        db_redis.expire(token, TOKEN_EXP)
+        db_redis.expire(token, settings.TOKEN_EXP)
         return token
 
     async def check(self, token: str) -> CurrentUser | None:

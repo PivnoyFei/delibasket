@@ -12,6 +12,8 @@ from application.schemas import SearchUser, SubParams
 from application.users.models import Follow, User
 from application.users.schemas import UserCreate, UserOut
 
+logger = logging.getLogger(__name__)
+
 
 class UserManager:
     async def get_all(self, params: SearchUser, user_id: int | None = None) -> tuple[int, list]:
@@ -125,7 +127,7 @@ class FollowManager:
                 await session.commit()
                 return True
             except UniqueViolationError as e:
-                logging.error(e)
+                logger.error(e)
                 return False
 
     async def delete(self, author_id: int, user_id: int) -> bool | None:
@@ -137,5 +139,5 @@ class FollowManager:
                 await session.commit()
                 return True
             except Exception as e:
-                logging.error(e)
+                logger.error(e)
                 return False
