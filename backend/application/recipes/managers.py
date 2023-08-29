@@ -8,11 +8,17 @@ from sqlalchemy.sql import func
 from starlette.requests import Request
 
 from application.database import scoped_session
-from application.ingredients.models import AmountIngredient, Ingredient
 from application.managers import BaseManager
 from application.recipes.models import Cart, Favorite, Recipe
 from application.recipes.schemas import CreateRecipe, FavoriteOut, RecipeOut, UpdateRecipe
 from application.schemas import SearchRecipe
+from application.services import (
+    delete_is_ingredients,
+    get_is_ingredients,
+    get_shopping_cart,
+    post_is_ingredients,
+    update_is_ingredients,
+)
 from application.tags.models import Tag, recipe_tag
 from application.users.managers import UserManager
 from application.users.models import User
@@ -24,10 +30,6 @@ class RecipeManager:
     @staticmethod
     async def _create_recipe_tag(session: AsyncSession, tags: list) -> Result:
         return await session.execute(insert(recipe_tag).values(tags))
-
-    @staticmethod
-    async def _create_amount_ingredient(session: AsyncSession, ingredients: list) -> Result:
-        return await session.execute(insert(AmountIngredient).values(ingredients))
 
     @staticmethod
     async def session_is_favorited(
@@ -60,14 +62,19 @@ class RecipeManager:
                     insert(Recipe).values(**items).returning(Recipe.id)
                 )
                 await self._create_recipe_tag(session, await recipe_in.tags_to_list(recipe_id))
-                await self._create_amount_ingredient(
-                    session, await recipe_in.ingredients_to_list(recipe_id)
-                )
-                await session.commit()
-                return recipe_id
+                if await post_is_ingredients(
+                    {
+                        "id": recipe_id,
+                        "ingredients": await recipe_in.ingredients_to_list(recipe_id),
+                    }
+                ):
+                    await session.commit()
+                    return recipe_id
+                raise AttributeError
 
             except (UniqueViolationError, AttributeError) as e:
                 await session.rollback()
+                await delete_is_ingredients(recipe_id)
                 logger.error(e)
                 return None
 
@@ -83,15 +90,12 @@ class RecipeManager:
                 await session.execute(delete(recipe_tag).where(recipe_tag.c.recipe_id == pk))
                 await self._create_recipe_tag(session, await recipe_in.tags_to_list(recipe_id))
 
-                await session.execute(
-                    delete(AmountIngredient).where(AmountIngredient.recipe_id == pk)
-                )
-                await self._create_amount_ingredient(
-                    session, await recipe_in.ingredients_to_list(recipe_id)
-                )
-
-                await session.commit()
-                return recipe_id
+                if await update_is_ingredients(
+                    {"id": recipe_id, "ingredients": await recipe_in.ingredients_to_list(recipe_id)}
+                ):
+                    await session.commit()
+                    return recipe_id
+                raise AttributeError
 
             except Exception as e:
                 await session.rollback()
@@ -112,15 +116,7 @@ class RecipeManager:
                     Recipe.image_path(request),
                     Recipe.author_id.label("author"),
                     Tag.array_agg("id", "name", "color", "slug").label("tags"),
-                    AmountIngredient.array_agg(
-                        Ingredient.id,
-                        Ingredient.name,
-                        Ingredient.measurement_unit,
-                        AmountIngredient.amount,
-                    ).label("ingredients"),
                 )
-                .join(Recipe.amount)
-                .join(AmountIngredient.ingredient)
                 .join(Recipe.tags, isouter=True)
                 .where(Recipe.id == pk)
                 .group_by(Recipe.id)
@@ -130,12 +126,17 @@ class RecipeManager:
             if not recipe:
                 return recipe
 
-            return await RecipeOut.to_dict(  # TODO описание проблемы внутри
+            recipe_dict = await RecipeOut.to_dict(  # TODO описание проблемы внутри
                 recipe,
                 author=await UserManager.session_by_id(session, recipe.author, user_id),
                 is_favorited=await self.session_is_favorited(session, recipe.id, user_id),
                 is_in_shopping_cart=await self.session_is_cart(session, recipe.id, user_id),
             )
+            if ingredients := await get_is_ingredients(recipe.id):
+                recipe_dict["ingredients"] = ingredients
+                return recipe_dict
+
+            raise AttributeError
 
     async def get_all(self, request: Request, params: SearchRecipe) -> tuple[int, list]:
         async with scoped_session() as session:
@@ -209,18 +210,8 @@ class FavoriteCartManager(BaseManager):
     @staticmethod
     async def get_shopping_cart(user_id: int) -> list:
         async with scoped_session() as session:
-            query = await session.execute(
-                select(
-                    Ingredient.name,
-                    Ingredient.measurement_unit,
-                    func.sum(AmountIngredient.amount).label("amount"),
-                )
-                .filter(Cart.recipe_id == AmountIngredient.recipe_id)
-                .join(Ingredient, AmountIngredient.ingredient_id == Ingredient.id)
-                .where(Cart.user_id == user_id)
-                .group_by(Ingredient.name, Ingredient.measurement_unit)
-            )
-            return query.all()
+            query = await session.execute(select(Cart.recipe_id).where(Cart.user_id == user_id))
+            return await get_shopping_cart(query.scalars().all())
 
     async def create(self, request: Request, recipe_id: int, user_id: int) -> FavoriteOut | None:
         async with scoped_session() as session:

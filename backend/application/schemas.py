@@ -20,7 +20,7 @@ _TM = TypeVar("_TM")
 class BaseSchema(BaseModel):
     id: int
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -93,10 +93,16 @@ class SearchName(Params):
 
 class SearchUser(Params):
     first_name: str | None = Query(
-        None, regex=name_str, max_length=256, description="Поиск по имени"
+        None,
+        pattern=name_str,
+        max_length=256,
+        description="Поиск по имени",
     )
     last_name: str | None = Query(
-        None, regex=name_str, max_length=256, description="Поиск по фамилии"
+        None,
+        pattern=name_str,
+        max_length=256,
+        description="Поиск по фамилии",
     )
 
     async def search(self, query: Select) -> Select:

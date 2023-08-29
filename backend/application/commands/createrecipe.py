@@ -8,20 +8,17 @@ import uuid
 
 import __init__
 from sqlalchemy import insert
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
 
-from application.ingredients.models import AmountIngredient
+from application.database import sessionmanager
 from application.recipes.models import Recipe
+from application.services import delete_is_ingredients, post_is_ingredients
 from application.settings import settings
 from application.tags.models import recipe_tag
 
 
 async def async_main() -> None:
-    engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, echo=True)
-    async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-    async with async_session() as session:
+    sessionmanager.init(settings.SQLALCHEMY_DATABASE_URI, "recipe")
+    async with sessionmanager.scoped_session("recipe") as session:
         for _ in range(1, 101):
             name = "".join(random.choice(string.ascii_lowercase) for i in range(20))
             recipe = {
@@ -44,17 +41,21 @@ async def async_main() -> None:
             was = []
             for _ in range(random.randint(1, 5)):
                 ingredient = {
-                    "recipe_id": recipe_id,
                     "ingredient_id": random.randint(1, 2186),
                     "amount": random.randint(1, 100),
                 }
-                if ingredient["ingredient_id"] not in was:
-                    was.append(ingredient["ingredient_id"])
+                if ingredient["id"] not in was:
+                    was.append(ingredient["id"])
                     ingredients.append(ingredient)
-            await session.execute(insert(AmountIngredient).values(ingredients))
 
-        await session.commit()
-    await engine.dispose()
+            if post_is_ingredients({"id": recipe_id, "ingredients": ingredients}):
+                await session.commit()
+            else:
+                await session.rollback()
+                delete_is_ingredients(recipe_id)
+                break
+
+    await sessionmanager.close("recipe")
 
 
 asyncio.run(async_main())

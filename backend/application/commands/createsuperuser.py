@@ -3,20 +3,17 @@
 
 import asyncio
 import getpass
-from typing import Any
 
 import __init__
 import bcrypt
-from pydantic import BaseModel, EmailStr, Field, ValidationError, constr
+from pydantic import BaseModel, EmailStr, StringConstraints, ValidationError
 from sqlalchemy import insert
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from typing_extensions import Annotated
 
+from application.database import sessionmanager
 from application.schemas import name_en_str, name_str
 from application.settings import settings
 from application.users.models import User
-
-# user = Manager(User)
 
 
 class EmailField(BaseModel):
@@ -24,11 +21,11 @@ class EmailField(BaseModel):
 
 
 class NameField(BaseModel):
-    name: constr(pattern=name_str, max_length=128) = Field(min_length=1)
+    name: Annotated[str, StringConstraints(pattern=name_str, min_length=1, max_length=150)]
 
 
 class NameEnField(BaseModel):
-    username: constr(pattern=name_en_str, max_length=128) = Field(min_length=1)
+    username: Annotated[str, StringConstraints(pattern=name_en_str, min_length=1, max_length=150)]
 
 
 class Createsuperuser:
@@ -81,20 +78,23 @@ class Createsuperuser:
 
 
 async def async_main(a: Createsuperuser) -> None:
-    engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, echo=False)
-    async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    try:
+        sessionmanager.init(settings.SQLALCHEMY_DATABASE_URI, "user")
+        async with sessionmanager.scoped_session("user") as session:
+            try:
+                await session.execute(insert(User).values(**a.items))
+                await session.commit()
+                print("== Пользователь сохранен! ==")
 
-    async with async_session() as session:
-        try:
-            await session.execute(insert(User).values(**a.items))
-            await session.commit()
-            print("== Пользователь сохранен! ==")
+            except TypeError as e:
+                await session.rollback()
+                print(f"email или username уже существует {e}")
 
-        except TypeError as e:
-            await session.rollback()
-            print(f"email или username уже существует {e}")
+    except Exception as e:
+        print(e)
 
-    await engine.dispose()
+    finally:
+        await sessionmanager.close("user")
 
 
 s = Createsuperuser()

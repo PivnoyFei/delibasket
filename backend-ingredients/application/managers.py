@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseManager(Generic[_TM]):
-    def __init__(self, model: _TM, schema_name: str | None = settings.SCHEMA_NAME):
+    def __init__(self, model: _TM, schema_name: str | None = settings.SCHEMA_NAME) -> None:
         self.model = model
         self.schema_name = schema_name
 

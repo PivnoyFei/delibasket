@@ -11,7 +11,7 @@ class TagCreate(BaseModel):
     color: str = Form(..., min_length=6, max_length=6, description="Цвет в HEX")
     slug: str = Form(..., description="Уникальный слаг")
 
-    class Config:
+    class ConfigDict:
         str_strip_whitespace = True
         json_schema_extra = {
             "example": {

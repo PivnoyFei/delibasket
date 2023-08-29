@@ -4,15 +4,33 @@ services:
   delibasket-backend:
     container_name: delibasket-backend
     build:
-        context: ../backend
-        dockerfile: Dockerfile
-    command: uvicorn application.main:app --reload --host 0.0.0.0
+      context: ../backend
+      dockerfile: Dockerfile
+    command: uvicorn application.main:app --reload --host 0.0.0.0 --port 9988
+    environment:
+      - TESTING=True
     volumes:
       - ../backend:/srv/www/app/
       - media_value:/srv/www/app/application/media
 
+  delibasket-backend-ingredients:
+    container_name: delibasket-backend-ingredients
+    build:
+      context: ../backend-ingredients
+      dockerfile: Dockerfile
+    command: uvicorn application.main:app --reload --host 0.0.0.0 --port 9989
+    environment:
+      - TESTING=True
+    volumes:
+      - ../backend-ingredients:/srv/www/app/
+
   frontend:
     container_name: frontend
     build:
-     context: ../frontend
-     dockerfile: Dockerfile
+      context: ../frontend
+      dockerfile: Dockerfile
+
+volumes:
+  media_value:
+  postgres_data:
+  redis_data:

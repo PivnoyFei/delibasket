@@ -1,12 +1,9 @@
 from contextlib import asynccontextmanager
-from os.path import isdir
 
-from debug_toolbar.middleware import DebugToolbarMiddleware
 from fastapi import FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.sql.schema import MetaData
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import Request
@@ -15,7 +12,7 @@ from application.auth.permissions import AuthBackend
 from application.database import Base, sessionmanager
 from application.exceptions import CustomException
 from application.routers import router
-from application.settings import MEDIA_ROOT, settings
+from application.settings import settings
 
 
 def init_routers(app_: FastAPI) -> None:
@@ -58,10 +55,6 @@ def make_middleware() -> list[Middleware]:
             backend=AuthBackend(),
             on_error=on_auth_error,
         ),
-        Middleware(
-            DebugToolbarMiddleware,
-            panels=["debug_toolbar.panels.sqlalchemy.SQLAlchemyPanel"],
-        ),
     ]
     return middleware
 
@@ -79,11 +72,12 @@ def create_app(init_db: bool | None = True) -> FastAPI:
 
     app_ = FastAPI(
         debug=False,
-        title="DELIBASKET",
+        title="DELIBASKET INGREDIENTS",
         description="Электронная продуктовая корзина",
         version="1.0.1",
         openapi_url=f"{settings.API_V1_STR}/docs/openapi.json",
         redoc_url=f"{settings.API_V1_STR}/docs",
+        docs_url="/docs",
         middleware=make_middleware(),
         contact={
             "name": "Смелов Илья",
@@ -101,8 +95,4 @@ def create_app(init_db: bool | None = True) -> FastAPI:
 
 
 app: FastAPI = create_app()
-
-if MEDIA_ROOT and isdir(MEDIA_ROOT):
-    app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
-
 metadata: MetaData = Base.metadata

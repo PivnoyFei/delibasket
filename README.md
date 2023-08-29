@@ -35,10 +35,14 @@
 
 ### Стек:
 ![Python](https://img.shields.io/badge/Python-171515?style=flat-square&logo=Python)![3.11](https://img.shields.io/badge/3.11-blue?style=flat-square&logo=3.11)
-![FastAPI](https://img.shields.io/badge/FastAPI-171515?style=flat-square&logo=FastAPI)![0.85.0](https://img.shields.io/badge/0.85.0-blue?style=flat-square&logo=0.85.0)
+![FastAPI](https://img.shields.io/badge/FastAPI-171515?style=flat-square&logo=FastAPI)![0.100](https://img.shields.io/badge/0.100-blue?style=flat-square&logo=0.100)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-171515?style=flat-square&logo=PostgreSQL)![13.0](https://img.shields.io/badge/13.0-blue?style=flat-square&logo=13.0)
+![Redis](https://img.shields.io/badge/Redis-171515?style=flat-square&logo=Redis)
+
+![Pydantic](https://img.shields.io/badge/Pydantic-171515?style=flat-square&logo=Pydantic)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-171515?style=flat-square&logo=SQLAlchemy)
 ![Alembic](https://img.shields.io/badge/Alembic-171515?style=flat-square&logo=Alembic)
+
 ![Docker](https://img.shields.io/badge/Docker-171515?style=flat-square&logo=Docker)
 ![Docker-compose](https://img.shields.io/badge/Docker--compose-171515?style=flat-square&logo=Docker)
 ![Nginx](https://img.shields.io/badge/Nginx-171515?style=flat-square&logo=Nginx)
@@ -65,13 +69,11 @@ docker-compose up -d --build
 
 #### Миграции базы данных:
 ```bash
-docker-compose exec delibasket-backend alembic revision --message="Initial" --autogenerate
+# docker-compose exec delibasket-backend alembic revision --message="Initial" --autogenerate
 docker-compose exec delibasket-backend alembic upgrade head
-```
 
-#### Останавливаем контейнеры:
-```bash
-docker-compose down -v
+# docker-compose exec delibasket-backend-ingredients alembic revision --message="Initial" --autogenerate
+docker-compose exec delibasket-backend-ingredients alembic upgrade head
 ```
 
 #### Создание суперпользователя:
@@ -79,9 +81,15 @@ docker-compose down -v
 docker-compose exec delibasket-backend python application/commands/createsuperuser.py
 ```
 
-#### Загрузка ингредиентов и тегов в бд после запуска контейнера, выберите то что нужно без `<>`, по умолчанию попробует загрузить оба файла:
+#### Загрузка тегов и ингредиентов в бд после запуска контейнера:
 ```bash
-docker-compose exec delibasket-backend python application/commands/load_json.py <ingredients.json / tags.json>
+docker-compose exec delibasket-backend python application/commands/load_json.py
+docker-compose exec delibasket-backend-ingredients python application/commands/load_json.py
+```
+
+#### Останавливаем контейнеры:
+```bash
+docker-compose down -v
 ```
 
 #### Автор

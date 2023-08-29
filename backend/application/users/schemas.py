@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field, constr, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, StringConstraints, field_validator, model_validator
+from typing_extensions import Annotated
 
 from application.exceptions import BadRequestException
 from application.schemas import BaseSchema, name_en_str, name_str
@@ -13,13 +14,13 @@ class UserRegistration(BaseModel):
 
 
 class UserCreate(BaseModel):
-    username: constr(pattern=name_en_str, min_length=1, max_length=150)
-    first_name: constr(pattern=name_str, min_length=1, max_length=150)
-    last_name: constr(pattern=name_str, min_length=1, max_length=150)
+    username: Annotated[str, StringConstraints(pattern=name_en_str, min_length=1, max_length=150)]
+    first_name: Annotated[str, StringConstraints(pattern=name_str, min_length=1, max_length=150)]
+    last_name: Annotated[str, StringConstraints(pattern=name_str, min_length=1, max_length=150)]
     email: EmailStr
     password: str | bytes = Field(min_length=7)
 
-    class Config:
+    class ConfigDict:
         str_strip_whitespace = True
         json_schema_extra = {
             "example": {

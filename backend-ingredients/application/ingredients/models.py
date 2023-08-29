@@ -22,7 +22,7 @@ class AmountIngredient(Base, TimeStampMixin):
     id = Column(Integer, primary_key=True)
     amount = Column(Integer)
 
-    recipe_id = Column(Integer, ForeignKey("recipe.id", ondelete="CASCADE"))
+    recipe_id = Column(Integer)
 
     ingredient_id = Column(Integer, ForeignKey("ingredient.id", ondelete="CASCADE"))
     ingredient = relationship(Ingredient)

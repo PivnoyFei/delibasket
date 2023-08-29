@@ -39,11 +39,11 @@ Base = declarative_base(cls=CustomBase)
 
 
 class DatabaseSessionManager:
-    def __init__(self) -> None:
+    def __init__(self):
         self._engine: dict[str, AsyncEngine | None] = {}
         self._sessionmaker: dict[str, async_sessionmaker | None] = {}
 
-    def init(self, host: str, schema_name: str | None = settings.SCHEMA_NAME) -> None:
+    def init(self, host: str, schema_name: str | None = settings.SCHEMA_NAME):
         self._engine[schema_name]: AsyncEngine = create_async_engine(host, pool_pre_ping=True)
         self._sessionmaker[schema_name]: async_sessionmaker[AsyncSession] = async_sessionmaker(
             self._engine[schema_name],
@@ -51,7 +51,7 @@ class DatabaseSessionManager:
             class_=AsyncSession,
         )
 
-    async def close(self, schema_name: str | None = settings.SCHEMA_NAME) -> None:
+    async def close(self, schema_name: str | None = settings.SCHEMA_NAME):
         if not self._engine.get(schema_name, None):
             raise Exception("DatabaseSessionManager is not initialized")
 
@@ -89,10 +89,10 @@ class DatabaseSessionManager:
         finally:
             await scoped_factory.remove()
 
-    async def create_all(self, connection: AsyncConnection) -> None:
+    async def create_all(self, connection: AsyncConnection):
         await connection.run_sync(Base.metadata.create_all)
 
-    async def drop_all(self, connection: AsyncConnection) -> None:
+    async def drop_all(self, connection: AsyncConnection):
         await connection.run_sync(Base.metadata.drop_all)
 
 

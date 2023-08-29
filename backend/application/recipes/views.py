@@ -95,13 +95,13 @@ async def download_shopping_cart(request: Request) -> FileResponse | JSONRespons
     if ingredients := await FavoriteCartManager.get_shopping_cart(request.user.id):
         ingredients_set = {}
         for item in ingredients:
-            if item not in ingredients_set:
-                ingredients_set[item.name] = {
-                    "amount": item.amount,
-                    "measurement_unit": item.measurement_unit,
-                }
+            if ingredients_set.get("name", None):
+                ingredients_set[item["name"]]["amount"] += item["amount"]
             else:
-                ingredients_set[item.name]["amount"] += item.amount
+                ingredients_set[item["name"]] = {
+                    "amount": item["amount"],
+                    "measurement_unit": item["measurement_unit"],
+                }
 
         cart_list = [
             "{} - {} {}.\n".format(
@@ -119,6 +119,7 @@ async def download_shopping_cart(request: Request) -> FileResponse | JSONRespons
         except Exception as e:
             logger.error(e)
             raise BadRequestException("Не удалось загрузить корзину")
+
         return FileResponse(file_path, background=BackgroundTask(cleanup))
     raise NotFoundException
 

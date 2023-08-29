@@ -3,7 +3,6 @@ from uuid import uuid4
 from application.auth.schemas import CurrentUser
 from application.database import db_redis
 from application.settings import settings
-from application.users.models import User
 
 
 def generate_uuid() -> str:
@@ -11,7 +10,7 @@ def generate_uuid() -> str:
 
 
 class AuthTokenRedisManager:
-    async def create(self, user: User) -> str | None:
+    async def create(self, user: CurrentUser) -> str | None:
         """Создает токен с временем действия."""
         token = generate_uuid()
         db_redis.hset(

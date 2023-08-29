@@ -12,7 +12,6 @@ from application.exceptions import (
     ForbiddenException,
     UnauthorizedException,
 )
-from application.users.models import User
 
 
 class AuthBackend(AuthenticationBackend):
@@ -22,7 +21,7 @@ class AuthBackend(AuthenticationBackend):
     Отдает `CurrentUser` для дальнейшей работы с неавторизованными пользователями.
     Для авторизованных пользователей отдает `User`."""
 
-    async def authenticate(self, request: HTTPConnection) -> tuple[bool, Optional[User]]:
+    async def authenticate(self, request: HTTPConnection) -> tuple[bool, Optional[CurrentUser]]:
         current_user = CurrentUser()
         authorization: str = request.headers.get("Authorization", None)
         if authorization:

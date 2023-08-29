@@ -3,11 +3,15 @@ from typing import Any, Optional
 from fastapi import Form
 from pydantic import BaseModel
 
-from application.ingredients.schemas import IngredientOut
 from application.recipes.models import Recipe
 from application.schemas import BaseSchema
 from application.tags.schemas import TagOut
 from application.users.schemas import UserOut
+
+
+class IngredientOut(BaseSchema):
+    name: str
+    measurement_unit: str
 
 
 class AmountOut(IngredientOut):
@@ -54,7 +58,7 @@ class CreateRecipe(BaseRecipe):
     ingredients: list[CreateAmountIngredient] = Form(..., description="Список ингредиентов")
     tags: list[int] = Form(..., description="Список тегов")
 
-    class Config:
+    class ConfigDict:
         str_strip_whitespace = True
         json_schema_extra = {
             "example": {
@@ -119,11 +123,6 @@ class RecipeOut(BaseSchema):
             "image": recipe.image,
             "tags": await TagOut.tuple_to_dict(recipe.tags),
             "author": author if author else recipe.author,
-            "ingredients": (
-                await AmountOut.tuple_to_dict(recipe.ingredients)
-                if getattr(recipe, "ingredients", None)
-                else None
-            ),
             "text": recipe.text,
             "cooking_time": recipe.cooking_time,
             "is_favorited": is_favorited,

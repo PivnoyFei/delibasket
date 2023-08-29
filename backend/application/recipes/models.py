@@ -22,8 +22,6 @@ from application.models import TimeStampMixin
 from application.settings import MEDIA_URL
 from application.users.models import User
 
-# from application.ingredients.models import AmountIngredient
-
 
 class Favorite(Base, TimeStampMixin):
     __table_args__ = (UniqueConstraint("user_id", "recipe_id"),)
@@ -71,7 +69,6 @@ class Recipe(Base, TimeStampMixin):
     tags = relationship("Tag", secondary="recipe_tag")
     favorites = relationship(Favorite)
     carts = relationship(Cart)
-    amount = relationship("AmountIngredient")
 
     @classmethod
     def image_path(cls, request: Request) -> Label:

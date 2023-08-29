@@ -12,6 +12,12 @@ services:
       - ${POSTGRES_PORT}
     env_file:
       - ./.env
+    environment:
+      - POSTGRES_NAME=${POSTGRES_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
+      - POSTGRES_PORT=${POSTGRES_PORT}
     networks:
       - delibasket
 
@@ -40,11 +46,47 @@ services:
       depends_on:
         - delibasket-db
         - delibasket-redis
-    command: gunicorn application.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000
+    command: gunicorn application.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:9988
     volumes:
       - media_value:/srv/www/app/application/media
     ports:
-      - 9988:8000
+      - 9988:9988
+
+  delibasket-db-ingredients:
+    container_name: ${POSTGRES_SERVER_INGREDIENTS}
+    image: postgres:13.0-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/delibasket/
+    command: -p ${POSTGRES_PORT_INGREDIENTS}
+    expose:
+      - ${POSTGRES_PORT_INGREDIENTS}
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_NAME=${POSTGRES_NAME_INGREDIENTS}
+      - POSTGRES_USER=${POSTGRES_USER_INGREDIENTS}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_INGREDIENTS}
+      - POSTGRES_SERVER=${POSTGRES_SERVER_INGREDIENTS}
+      - POSTGRES_PORT=${POSTGRES_PORT_INGREDIENTS}
+    networks:
+      - delibasket-ingredients
+
+  delibasket-backend-ingredients:
+    container_name: delibasket-backend-ingredients
+    <<: &delibasket-backend-ingredients
+      image: ${DOCKERHUB_USERNAME}/backend-ingredients:latest
+      restart: always
+      networks:
+        - delibasket-ingredients
+      env_file:
+        - ./.env
+      depends_on:
+        - delibasket-db-ingredients
+        - delibasket-redis
+    command: gunicorn application.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:9989
+    ports:
+      - 9989:9989
 
   frontend:
     container_name: frontend
@@ -68,9 +110,11 @@ services:
       - media_value:/var/html/media/
     depends_on:
       - delibasket-backend
+      - delibasket-backend-ingredients
       - frontend
     networks:
       - delibasket
+      - delibasket-ingredients
 
 volumes:
   media_value:
@@ -79,3 +123,4 @@ volumes:
 
 networks:
   delibasket:
+  delibasket-ingredients:
